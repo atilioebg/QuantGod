@@ -394,37 +394,69 @@ BTCR/
 
 ---
 
-## 12. Roadmap e Próximos Passos
+## 12. MAPA DO IMPÉRIO ATUALIZADO (Roadmap v2.0)
 
-> **Referência**: `docs/CHECKLIST_PROXIMOS_PASSOS.md`
+Este é o guia definitivo para levar o projeto do estágio "Protótipo Funcional" para "Hedge Fund Pessoal".
 
-### ✅ Milestones Alcançados
-- [x] **Fase de Auditoria**: Validação visual de labels e acurácia base.
-- [x] **Rigor Científico**: Divisão cronológica sem data leakage e ML Engineering (AMP/Grad Accumulation).
-- [x] **SAIMP Sniper Cockpit**: Dashboard funcional com Warm-up, Inferência em tempo real e Análise de OFI.
+### 🏁 FASE 1: O TESTE DE FOGO (O "Agora")
+**Objetivo**: Validar que o software não quebra e que a lógica básica funciona no mundo real.
 
----
+1. **Validação Visual (Estabilidade)**
+   - **Ação**: Deixe o Dashboard rodando localmente por 1 a 2 horas.
+   - **O que checar**:
+     - O "Warm-up" carrega sem erros?
+     - O preço na tela bate com o da Binance?
+     - O velocímetro de probabilidade oscila (está vivo) ou travou?
+   - **Meta**: Zero erros de conexão ou estouro de memória (RAM/VRAM).
 
-### 🏁 FASE 1: O TESTE DE FOGO (Imediato)
-**Objetivo**: Validar a estabilidade do software rodando localmente.
-- [ ] **Validação Visual**: Deixar o Dashboard rodar por 1-2 horas para garantir que o "Warm-up" e o buffer funcionam sem quedas.
-- [ ] **Paper Trading Visual**: Monitorar sinais 🟢/🔴, anotar preço e validar lucro após 4 horas (Veredito da IA vs realidade).
+2. **Paper Trading Visual (Acurácia)**
+   - **Ação**: Quando aparecer um sinal 🟢 ou 🔴 com confiança > 50%:
+     - Anote o preço e o horário.
+     - Volte 4 horas depois.
+   - **Resultado**: O preço foi para o alvo (Lucro) ou contra (Prejuízo)?
+   - **Meta**: Confirmar se a "visão" da IA está alinhada com a realidade do mercado atual.
 
-### ☁️ FASE 2: INFRAESTRUTURA & ESCALA (A "Nuvem")
-**Objetivo**: Profissionalizar a execução e garantir disponibilidade 24/7.
-- [ ] **Migração Cloud (RunPod / Vast.ai)**: Servidor robusto para evitar quedas de luz/internet durante trades.
-- [ ] **Acesso Remoto**: Configurar IP público para monitorar o robô via celular de qualquer lugar.
+### ☁️ FASE 2: INFRAESTRUTURA & DADOS PREMIUM
+**Objetivo**: Profissionalizar a execução (sair do PC Gamer) e refinar a "gasolina" do modelo.
+
+1. **Migração para Cloud (RunPod / Vast.ai)**
+   - **Por que?** Servidores dedicados têm uptime de 99.9%. Evita quedas de luz ou internet.
+   - **Ação**: Alugar instância (CPU robusta ou GPU básica) para rodar o Dashboard 24/7.
+   - **Extra**: Configurar acesso via celular para monitorar o robô de qualquer lugar.
+
+2. **Upgrade de Dados (Tardis.dev / Kaiko)**
+   - **O Problema**: Dados públicos da Binance têm pequenos "gaps" e são agregados.
+   - **A Solução**: Integrar `Tardis.dev` para acesso ao histórico tick-by-tick e replay de Order Book (L2).
+   - **Impacto**: Ver o mercado em 4K em vez de HD, capturando micro-padrões invisíveis.
 
 ### 🌊 FASE 3: EVOLUÇÃO CIENTÍFICA (O "Quant God")
-**Objetivo**: Aumentar o Win Rate de 40% para 50%+ usando matemática avançada.
-- [ ] **Wavelets (Denoising)**: Implementar Transformada Wavelet para limpar o ruído do mercado no `tensor_builder.py`.
-- [ ] **Arquitetura Híbrida (Stacking)**: Criar o "Gerente de Risco" usando XGBoost para aprovar/negar sinais do ViViT.
+**Objetivo**: Aumentar o Win Rate usando Matemática Avançada e Segunda IA.
+
+1. **Wavelets (Denoising Matemático)**
+   - **Conceito**: Limpar o sinal do mercado para focar apenas na tendência estrutural.
+   - **Ação**: Implementar Transformada Wavelet no `tensor_builder.py`.
+
+2. **Arquitetura de Dupla IA (Stacking / Ensemble)**
+   - **IA 1 (O Visionário)**: Modelo ViViT atual. Olha o gráfico e prevê a direção.
+   - **IA 2 (O Gerente de Risco)**: Novo modelo (XGBoost) treinado em dados tabulares para "vetar" sinais em horários de baixo volume ou ruído.
+   - **Resultado**: Redução drástica de falsos positivos.
 
 ---
-### 📝 Checklist de Prioridades
-- **Hoje**: Rodar dashboard, monitorar logs e validar Warm-up.
-- **Próxima Semana**: Migrar para instância em nuvem (Vast.ai).
-- **Futuro**: Retreinar com Wavelets e implementar Stacking.
+
+### ✅ CHECKLIST UNIFICADO DE PRIORIDADES
+
+**HOJE (Fase 1)**
+- [ ] Rodar `streamlit run src/dashboard/app.py`.
+- [ ] Validar Warm-up e estabilidade por 2 horas.
+- [ ] Fazer 3 a 5 "Paper Trades" (anotar e conferir resultado).
+
+**SEMANA QUE VEM (Fase 2)**
+- [ ] Criar conta na RunPod/Vast.ai e subir o projeto.
+- [ ] (Opcional) Avaliar custo do Tardis.dev para dataset de treino mais preciso.
+
+**FUTURO PRÓXIMO (Fase 3)**
+- [ ] Implementar Wavelets (Limpeza de Sinal).
+- [ ] Treinar a 2ª IA (XGBoost) para filtrar os sinais do ViViT.
 
 ---
-> **SAIMP Project** - *Decoding the Matrix.*
+> **SAIMP Project** - *Decoding the Matrix.* 🐺🚀
