@@ -398,25 +398,33 @@ BTCR/
 
 > **Referência**: `docs/CHECKLIST_PROXIMOS_PASSOS.md`
 
-### 🟢 FASE 1: Auditoria & Validação Local (Concluída)
-- [x] Executar `verify_labels.py` e validar lógica visualmente.
-- [x] Verificar se a acurácia de validação supera o aleatório (>33%).
+### ✅ Milestones Alcançados
+- [x] **Fase de Auditoria**: Validação visual de labels e acurácia base.
+- [x] **Rigor Científico**: Divisão cronológica sem data leakage e ML Engineering (AMP/Grad Accumulation).
+- [x] **SAIMP Sniper Cockpit**: Dashboard funcional com Warm-up, Inferência em tempo real e Análise de OFI.
 
-### 🟡 FASE 2: Rigor Científico (Concluída)
-- [x] **Divisão Cronológica**: Treino (Nov-Dez) / Validação (Jan). Sem vazamento de futuro.
-- [x] **ML Engineering**: Gradient Accumulation, Mixed Precision (AMP).
-- [x] **Config Centralizada**: `src/config.py`.
+---
 
-### 🟠 FASE 3: Visão Computacional Financeira (Em Andamento)
-- [x] **Backtest Sniper Integration**: Unificação de stream e validação de performance financeira.
-- [x] **Sniper Cockpit (Live)**: Painel Streamlit (`src/dashboard/app.py`) com inferência em tempo real e análise de OFI.
-- [ ] **Attention Map**: Visualizar onde a IA está "olhando" (pesos do Transformer).
-- [ ] **Advanced Heatmaps**: Plotagem do tensor 4D completo no dashboard.
+### 🏁 FASE 1: O TESTE DE FOGO (Imediato)
+**Objetivo**: Validar a estabilidade do software rodando localmente.
+- [ ] **Validação Visual**: Deixar o Dashboard rodar por 1-2 horas para garantir que o "Warm-up" e o buffer funcionam sem quedas.
+- [ ] **Paper Trading Visual**: Monitorar sinais 🟢/🔴, anotar preço e validar lucro após 4 horas (Veredito da IA vs realidade).
 
-### 🔵 FASE 4: Escala na Nuvem
-- [ ] **Infraestrutura**: Migrar para VM com GPU A100 (AWS/GCP).
-- [ ] **Migração de Dados**: Mover `data/` para S3/GCS.
-- [ ] **Treino Full-Scale**: Rodar com 3+ anos de dados.
+### ☁️ FASE 2: INFRAESTRUTURA & ESCALA (A "Nuvem")
+**Objetivo**: Profissionalizar a execução e garantir disponibilidade 24/7.
+- [ ] **Migração Cloud (RunPod / Vast.ai)**: Servidor robusto para evitar quedas de luz/internet durante trades.
+- [ ] **Acesso Remoto**: Configurar IP público para monitorar o robô via celular de qualquer lugar.
+
+### 🌊 FASE 3: EVOLUÇÃO CIENTÍFICA (O "Quant God")
+**Objetivo**: Aumentar o Win Rate de 40% para 50%+ usando matemática avançada.
+- [ ] **Wavelets (Denoising)**: Implementar Transformada Wavelet para limpar o ruído do mercado no `tensor_builder.py`.
+- [ ] **Arquitetura Híbrida (Stacking)**: Criar o "Gerente de Risco" usando XGBoost para aprovar/negar sinais do ViViT.
+
+---
+### 📝 Checklist de Prioridades
+- **Hoje**: Rodar dashboard, monitorar logs e validar Warm-up.
+- **Próxima Semana**: Migrar para instância em nuvem (Vast.ai).
+- **Futuro**: Retreinar com Wavelets e implementar Stacking.
 
 ---
 > **SAIMP Project** - *Decoding the Matrix.*
