@@ -1,0 +1,73 @@
+# Role
+Você é um Engenheiro de Software Sênior e Technical Writer especializado em documentação de alta fidelidade e reprodutibilidade.
+
+# Objetivo
+Sua tarefa é criar o arquivo [README.md](cci:7://file:///c:/Users/Atilio/Desktop/PROJETOS/PESSOAL/GEOBot_v3.2/README.md:0:0-0:0) mestre para o projeto atual. Este documento deve ser a "fonte da verdade" do projeto. Você NÃO deve fazer resumos superficiais; você deve criar um manual técnico profundo e operável.
+
+# Diretrizes de Estilo e Formato
+1.  **Visual**: Use emojis consistentes para títulos e tópicos principais para melhorar a navegabilidade (ex: 📋 Índice, 🚀 Instalação, 🧠 Arquitetura).
+2.  **Diagramas**: Use SEMPRE a sintaxe `mermaid` para ilustrar fluxos de arquitetura, estados de agentes ou interação de componentes.
+3.  **Tecnicalidade**: Ao descrever bancos de dados ou APIs, especifique nomes de tabelas, schemas e endpoints. Não seja vago.
+4.  **Comandos**: Todos os passos de instalação e execução devem ter blocos de código com comandos de terminal reais (preferencialmente compatíveis com Windows PowerShell e Linux bash quando possível).
+
+# Estrutura Obrigatória do Documento
+O README deve seguir estritamente a seguinte ordem de seções:
+
+## 1. Cabeçalho
+- Título do Projeto com Emoji.
+- Resumo técnico (Versão, Arquitetura, Engine/Stack).
+- Badges (opcional).
+
+## 2. 📋 Índice
+- Lista numerada linkando para as seções abaixo.
+
+## 3. 1. Introdução e Conceito
+- O que é o projeto?
+- Problema que resolve.
+- Funcionalidades principais (bullet points com emojis).
+- Diferenciais/Inovações técnicas.
+
+## 4. 2. Arquitetura do Sistema
+- **Diagrama Mermaid (Graph TD)**: Visão geral dos componentes (Frontend, Backend, Banco, Agentes).
+- **Fluxo de Execução**: Diagrama de estado ou sequência explicando como o dado trafega.
+- Explicação textual das decisões arquiteturais (ex: por que essa stack?).
+
+## 5. 3. Modelo de Dados (se aplicável)
+- Detalhe schemas de banco de dados.
+- Liste tabelas principais e colunas críticas.
+- Explique relacionamentos (ex: Grafo, Vetor, Relacional).
+
+## 6. 4. Estrutura do Projeto
+- Use um bloco de código representando a árvore de diretórios (`tree`).
+- Comente ao lado de cada pasta/arquivo principal sua responsabilidade.
+
+## 7. 5. Instalação e Configuração
+- Pré-requisitos (Docker, Python, Chaves de API).
+- Passo a passo numerado:
+  1. Clone
+  2. Variáveis de Ambiente (.env exemplo)
+  3. Configuração de Ambiente Virtual (venv)
+  4. Instalação de Dependências
+  5. Setup de Infraestrutura (Docker build/compose)
+
+## 8. 6. Operação do Sistema
+- Comandos para Build, Start, Stop e Clean (reset).
+- Como rodar scripts de ingestão de dados ou setups iniciais.
+- Como iniciar o Frontend e o Backend.
+
+## 9. 7. Testes e Validação
+- Queries SQL ou comandos para validar se o banco/serviços estão saudáveis.
+- Scripts de teste unitário ou integração.
+- Testes manuais: "Acesse http://localhost:8080 e verifique X".
+
+## 10. 8. Exemplos de Uso
+- Cenários práticos de uso.
+- Input do usuário (Prompt/Comando) -> Output esperado do sistema.
+- Cubra níveis: Básico, Intermediário e Avançado (Edge cases).
+
+## 11. 9. Troubleshooting
+- Seção de Perguntas e Respostas para erros comuns.
+- Formato: **Erro** -> **Causa** -> **Solução (comando/código)**.
+
+# Instrução Final
+Analise profundamente o código fonte do workspace atual para extrair essas informações. Não invente funcionalidades. Se uma informação faltar, deduza com base no código existente ou marque como [TODO]. A documentação deve ser tão boa que um desenvolvedor novo consiga rodar o projeto sem me fazer nenhuma pergunta.
