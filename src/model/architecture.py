@@ -1,74 +1,121 @@
 import torch
-import torch.nn as nn
+from torch import nn, einsum
+import torch.nn.functional as F
+from einops import rearrange, repeat
+from einops.layers.torch import Rearrange
 
+# --- BLOCOS AUXILIARES ---
+class PreNorm(nn.Module):
+    def __init__(self, dim, fn):
+        super().__init__()
+        self.norm = nn.LayerNorm(dim)
+        self.fn = fn
+    def forward(self, x, **kwargs):
+        return self.fn(self.norm(x), **kwargs)
+
+class FeedForward(nn.Module):
+    def __init__(self, dim, hidden_dim, dropout = 0.):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(dropout)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+class Attention(nn.Module):
+    def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0.):
+        super().__init__()
+        inner_dim = dim_head * heads
+        project_out = not (heads == 1 and dim_head == dim)
+
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        self.attend = nn.Softmax(dim = -1)
+        self.dropout = nn.Dropout(dropout)
+
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        ) if project_out else nn.Identity()
+
+    def forward(self, x):
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+
+        attn = self.attend(dots)
+        attn = self.dropout(attn)
+
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
+
+class Transformer(nn.Module):
+    def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
+        super().__init__()
+        self.layers = nn.ModuleList([])
+        for _ in range(depth):
+            self.layers.append(nn.ModuleList([
+                PreNorm(dim, Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout)),
+                PreNorm(dim, FeedForward(dim, mlp_dim, dropout = dropout))
+            ]))
+    def forward(self, x):
+        for attn, ff in self.layers:
+            x = attn(x) + x
+            x = ff(x) + x
+        return x
+
+# --- A CLASSE PRINCIPAL (ALINHADA COM O PREDICTOR) ---
 class SAIMPViViT(nn.Module):
-    def __init__(self, seq_len=32, input_channels=4, price_levels=128, d_model=128, nhead=4, num_layers=2, num_classes=3):
+    def __init__(self, seq_len=32, input_channels=4, price_levels=128, num_classes=3, 
+                 dim=128, depth=4, heads=4, mlp_dim=256, dropout=0.1, emb_dropout=0.1):
         super().__init__()
         
         self.seq_len = seq_len
         self.price_levels = price_levels
         
-        # 1. Feature Extraction (CNN Espacial)
-        # Entra: [Batch, Channels, Height, Width] -> [Batch, 4, 128, 1] (considerando cada time step como width=1 na entrada bruta, mas aqui processamos diferente)
-        # Na verdade, o input do ViViT costuma ser [Batch, Seq, Channels, Height]
+        # Patch Embedding
+        # Input: [Batch, Channels, Seq_Len, Price_Levels]
+        # Transforma canais e níveis de preço em dimensão de embedding
+        patch_dim = input_channels * price_levels 
         
-        # Camada de Embedding para projetar a dimensão de preço (128) para d_model
-        # Vamos usar uma CNN 1D para processar a coluna de preço de cada frame
-        self.price_encoder = nn.Sequential(
-            nn.Conv1d(in_channels=input_channels, out_channels=64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(2), # 128 -> 64
-            nn.Conv1d(in_channels=64, out_channels=d_model, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(2)  # 64 -> 32 (Dimensão espacial reduzida)
+        self.to_patch_embedding = nn.Sequential(
+            Rearrange('b c t h -> b t (c h)'), # Flatten channels e height
+            nn.Linear(patch_dim, dim),
         )
-        
-        # Agora temos features espaciais. Precisamos achatar para entrar no Transformer
-        # Feature size atual: 32 * d_model. Vamos projetar para d_model.
-        self.feature_projection = nn.Linear(32 * d_model, d_model)
-        
-        # 2. Positional Encoding (Temporal)
-        self.pos_embedding = nn.Parameter(torch.randn(1, seq_len, d_model))
-        
-        # 3. Transformer Encoder (Temporal)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True, dropout=0.1)
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        
-        # 4. Head de Classificação
-        self.classifier = nn.Sequential(
-            nn.Linear(d_model, 64),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(64, num_classes)
+
+        self.pos_embedding = nn.Parameter(torch.randn(1, seq_len + 1, dim))
+        self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
+        self.dropout = nn.Dropout(emb_dropout)
+
+        self.transformer = Transformer(dim, depth, heads, 64, mlp_dim, dropout)
+
+        self.mlp_head = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, num_classes)
         )
 
     def forward(self, x):
-        # x shape: [Batch, Seq_Len, Channels, Price_Levels]
-        b, s, c, h = x.shape
+        # x shape esperado: (Batch, Channels, Seq_Len, Price_Levels)
         
-        # Precisamos processar cada passo de tempo (s) independentemente na CNN
-        # Merge Batch e Seq: [B*S, C, H]
-        x = x.view(b * s, c, h)
+        x = self.to_patch_embedding(x) # -> (Batch, Seq_Len, Dim)
+        b, n, _ = x.shape
+
+        cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
+        x = torch.cat((cls_tokens, x), dim=1)
+        x += self.pos_embedding[:, :(n + 1)]
+        x = self.dropout(x)
+
+        x = self.transformer(x)
+
+        x = x[:, 0] # Pega apenas o CLS token
         
-        # Passa pela CNN
-        x = self.price_encoder(x) # [B*S, d_model, H/4] -> [B*S, 128, 32]
-        
-        # Flatten espacial
-        x = x.view(b, s, -1) # [B, S, 128*32]
-        
-        # Projeta para d_model
-        x = self.feature_projection(x) # [B, S, 128]
-        
-        # Adiciona Posição
-        x = x + self.pos_embedding[:, :s, :]
-        
-        # Transformer
-        x = self.transformer(x) # [B, S, 128]
-        
-        # Pega apenas o último estado (último time step) para prever o futuro
-        last_state = x[:, -1, :] # [B, 128]
-        
-        # Classifica
-        logits = self.classifier(last_state)
-        
-        return logits
+        return self.mlp_head(x)

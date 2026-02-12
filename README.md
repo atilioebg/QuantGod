@@ -279,10 +279,30 @@ Antes de abrir a corretora para clicar, faça esta checagem:
 
 > **Exemplo Real (Caso Neutro)**: Se o sinal for **NEUTRO** com **70% de Confiança**, a IA está te dando um aviso forte: "Tenho certeza absoluta de que não é hora de operar, mesmo que o fluxo (OFI) pareça bom."
 
-### 🛡️ Análise de Barreiras (Suporte e Resistência)
-O painel classifica a força das regiões de preço:
-*   **"Suporte VERDADEIRO"**: Preço bate no fundo e o OFI fica verde (+). Indica defesa ativa de grandes players. **Ponto de Compra Seguro.**
-*   **"Suporte FALSO (Armadilha)"**: Preço parado no fundo, mas o OFI continua vermelho (-). Ninguém está comprando; provável rompimento para baixo. **NÃO COMPRE.**
+### 🛡️ Análise de Barreiras (Inteligência de Fluxo)
+O painel classifica a força das regiões de preço e identifica manipulações:
+
+*   **Análise Multi-Timeframe (MTF)**: O Cockpit exibe quatro visões síncronas para garantir que você nunca opere contra a macro-tendência:
+    *   **Microestrutura (15m)**: O "campo de batalha" imediato.
+    *   **Tendência Intraday (1h)**: Filtra o ruído e mostra o fluxo da hora.
+    *   **Contexto de Inferência (4h)**: O horizonte de visão da IA (Configurável).
+    *   **Visão Diária (1d)**: As grandes paredes institucionais das últimas 24h.
+*   **Score de "Realidade" (Anti-Spoofing)**: As linhas de Suporte e Resistência exibem uma porcentagem de "Realidade".
+    *   **Como funciona a lógica**: O sistema compara o volume acumulado naquele preço com a **execução real** (trades realizados).
+    *   **Execução > 0**: Se houver negócios sendo fechados naquele nível, o sistema atribui alta probabilidade de ser uma barreira real (~95%), pois o mercado está "testando" e consumindo a ordem.
+    *   **Execução = 0**: Se houver uma parede enorme de ordens mas zero negócios realizados, a probabilidade cai (~45%), sinalizando que pode ser **Spoofing** (ordens fantasmas colocadas para manipular o preço).
+*   **Visual Dinâmico & Inteligência de Estrutura (Motor v2)**: 
+    *   **Polaridade Absoluta & Mapa de Cores**: O sistema aplica cores técnicas rigorosas: **Verde Neon** para suportes (abaixo do preço) e **Vermelho Alerta** para resistências (acima do preço).
+    *   **Estratégia de Balde Duplo (Double Bucket)**: Garante visibilidade equilibrada, exibindo obrigatoriamente os **3 níveis técnicos mais próximos acima e os 3 abaixo** do preço real.
+    *   **Prioridade Histórica (Deep Scan)**: O sistema prioriza níveis reais encontrados em até 72h de histórico. Níveis psicológicos só são ativados se o Deep Scan não encontrar estrutura anterior (ex: All Time High).
+    *   **Lógica de "Zona de Briga" (💥 ZONA DE TESTE)**: Quando o preço desafia um nível (distância < 0.05%), a linha torna-se **sólida, semi-transparente (0.6)** e levemente mais grossa, indicando teste ativo sem esconder o candle.
+    *   **Cláusula de Segurança (🧠 PSICOLÓGICO)**: Projeções automáticas em zonas sem histórico.
+        *   **Passo Dinâmico**: Saltos de **$500** (para preços > $50k) ou **$100** (preços < $50k) para evitar poluição visual.
+    *   **Layering Profissional**: Todas as linhas de barreira são desenhadas **atrás dos candles** (layer below), garantindo que a ação de preço (pavios e corpos) seja sempre protagonista.
+    *   **Zonas de Confluência**: Agrupamento automático de níveis próximos (< 0.1%) com reforço visual (width 3+).
+    *   **Tipos de Traçado & Validação**:
+        *   Linhas **Tracejadas (`dash`)**: Barreiras **REAIS** (Volume confirmado por execução de trades).
+        *   Linhas **Traço-Ponto (`dashdot`)**: Suspeita de **SPOOFING** (Volume estacionário/sem execução).
 
 ---
 
