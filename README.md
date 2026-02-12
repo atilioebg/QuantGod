@@ -268,6 +268,31 @@ Três indicadores que devem ser lidos em convergência:
     - **OFI Negativo (-)**: Dinheiro real saindo (Vendedores agredindo).
     - **Divergência**: Se o preço sobe, mas o OFI cai, é uma **armadilha**. O preço está subindo "vazio" (sem volume real). O OFI te salva dessas furadas.
 
+#### C. Telemetria & Validação (Auditoria de Performance)
+O sistema possui um "Gravador de Caixa Preta" (`src/live/predictor.py`) que registra cada decisão tomada pela IA para auditoria posterior.
+
+1.  **Onde Fica?**: `data/prediction_log.csv`
+2.  **O que Grava?**:
+    *   `timestamp`: Hora exata da decisão.
+    *   `price`: Preço de execução.
+    *   `signal`: Direção (COMPRA/VENDA/NEUTRO).
+    *   `confidence`: Probabilidade bruta (0.0 a 1.0).
+    *   `ofi`: Valor do fluxo no momento do sinal.
+    *   `verdict`: Texto completo da análise de barreiras.
+    *   `result`: Status do trade (preenchido post-factum).
+
+> **Visualização**: No rodapé do Cockpit, a seção **"🚦 Auditoria de Performance"** exibe esses logs em tempo real, colorindo o OFI (Verde/Vermelho) e marcando o resultado (✅ Win / ❌ Loss).
+
+#### D. Manual de Leitura Visual (Guia de Legendas)
+O gráfico não é apenas velas; é um mapa tático.
+
+| Componente | Estilo Visual | Significado | Ação Sugerida |
+|:---|:---|:---|:---|
+| **ZONA DE TESTE** | Linha Sólida + Grossa (Opacidade 0.6) | **Guerra Imediata**. O preço está "brigando" para passar. | Atenção redobrada. Aguarde rompimento ou rejeição. |
+| **ESTRUTURA** | Linha Tracejada (`dash`) | **Concreto**. Suporte/Resistência histórico com volume real. | Alta chance de segurar o preço. Bom alvo de Take Profit. |
+| **PSICOLÓGICO** | Linha Traço-Ponto (`dashdot`) | **Vidro**. Nível matemático (ex: 100k) sem histórico recente. | Pode quebrar fácil. Não confie cegamente. |
+| **COR** | 🟢 Verde Neon / 🔴 Vermelho Alerta | Polaridade (Suporte vs Resistência). | Verde = Compradores defendendo. Vermelho = Vendedores defendendo. |
+
 ### 🧭 Como Operar: Checklist Mental de 5 Segundos
 Antes de abrir a corretora para clicar, faça esta checagem:
 

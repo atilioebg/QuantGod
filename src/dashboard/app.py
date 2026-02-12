@@ -12,7 +12,8 @@ import sys
 sys.path.append(str(Path.cwd()))
 
 from src.live.connector import BinanceConnector
-from src.live.predictor import SniperBrain
+from src.live.connector import BinanceConnector
+from src.live.predictor import SniperBrain, PredictionValidator
 
 st.set_page_config(page_title="Sniper Cockpit", layout="wide", page_icon="🎯")
 
@@ -25,12 +26,16 @@ def get_system():
     conn.warm_up()
     
     # Cérebro
+    # Cérebro
     brain = SniperBrain()
     
-    return conn, brain
+    # Auditor (Telemetria)
+    validator = PredictionValidator()
+    
+    return conn, brain, validator
 
 # Gerenciamento de Ciclo de Vida do Recurso (Estabilidade)
-conn_obj, brain_obj = get_system()
+conn_obj, brain_obj, val_obj = get_system()
 
 def get_candles(df_trades, window="15m"):
     """Agrega trades em velas OHLC"""
@@ -65,7 +70,7 @@ st.markdown("---")
 # O Fragmento permite atualizar apenas esta parte da tela a cada 5 segundos
 # Isso elimina o "pisca-pisca" da página inteira e resolve erros de ID duplicado.
 @st.fragment(run_every=10)
-def render_live_dashboard(conn, brain):
+def render_live_dashboard(conn, brain, validator):
     # Lock de Execução para evitar death spiral (overlapping runs)
     if st.session_state.get('analyzing', False):
         return
@@ -98,18 +103,21 @@ def render_live_dashboard(conn, brain):
                 st.markdown("### 🛡️ Análise de Barreiras & Estrutura")
                 col_barreira, col_ofi_metric = st.columns(2)
                 
-                barrier_msg = "Lateralidade: Aguardando rompimento de fluxo ou estrutura."
+                barrier_msg = "O mercado segue lateralizado, aguardando definição clara de fluxo ou rompimento de estrutura."
                 if sinal == 0:
-                    barrier_msg = "Lateralidade: Aguardando rompimento de fluxo ou estrutura."
+                    barrier_msg = "O mercado segue lateralizado, aguardando definição clara de fluxo ou rompimento de estrutura."
                 elif sinal == 2: 
-                    barrier_msg = "✅ SUPORTE VERDADEIRO, o fluxo confirma a zona de liquidez, logo temos uma barreira real." if ofi > 0 else "⚠️ SUPORTE FALSO, o volume não é validado pelo fluxo, logo temos suspeita de spoofing."
+                    barrier_msg = "✅ Suporte confirmado! O fluxo agressivo valida a região de liquidez." if ofi > 0 else "⚠️ Atenção: Suporte sem fluxo comprador. Possível armadilha (spoofing)."
                 elif sinal == 1: 
-                    barrier_msg = "✅ RESISTÊNCIA VERDADEIRA, o fluxo confirma a zona de liquidez, logo temos uma barreira real." if ofi < 0 else "⚠️ RESISTÊNCIA FALSA, o volume não é validado pelo fluxo, logo temos suspeita de spoofing."
+                    barrier_msg = "✅ Resistência confirmada! O fluxo vendedor valida a barreira." if ofi < 0 else "⚠️ Atenção: Resistência sem fluxo vendedor. Possível armadilha (spoofing)."
                 
-                col_barreira.info(f"**Veredito:** {barrier_msg}")
+                col_barreira.info(f"⚖️ {barrier_msg}")
                 # Correção de Coerência OFI (Precisão de 4 casas decimais)
                 desc_ofi = f"{ofi:.4f} ({result['trend_intent']})"
                 col_ofi_metric.metric("Order Flow (OFI)", desc_ofi, delta=round(ofi, 4))
+                
+                if ofi == 0.0:
+                    st.warning("⚠️ **ATENÇÃO: OFI ZERADO (Eletroencefalograma Plano).** Sem dados de fluxo. Verifique se o coletor de trades está rodando.")
     
                 # Frase Descritiva Acionável (README.md logic)
                 with st.expander("📌 O QUE FAZER AGORA? (Manual do Piloto)", expanded=True):
@@ -126,9 +134,51 @@ def render_live_dashboard(conn, brain):
                         
                         st.success(f"{emoji} **ORDEM: {labels[sinal]}**, o mercado apresenta viés de {direcao} com {conf_msg}, logo a análise de {conv_msg}.")
                         st.info(f"**Checklist Mental:** 1. Sinal Direcional {emoji} | 2. Confiança >50% | 3. OFI Convergente? {'Sim' if conv else 'Não'}")
+
+                # --- 📡 TELEMETRIA (Performance Audit) ---
+                # Registrar decisão APÓS todas as variáveis estarem definidas
+                validator.register_prediction(
+                    price=price, signal=labels[sinal], confidence=conf, 
+                    ofi=ofi, verdict=barrier_msg, strategy=labels[sinal]
+                )
+                # 3. Processar P&L de ordens pendentes
+                validator.process_pending_outcomes(current_price=price)
+
+                st.markdown("---")
+
+                st.markdown("---")
+                
+                # --- 📖 GUIA VISUAL (Legendas) ---
+                with st.expander("📖 Guia de Leitura & Legendas do Cockpit", expanded=False):
+                    col_leg_chart, col_leg_metrics = st.columns(2)
+                    
+                    with col_leg_chart:
+                        st.markdown("### 📊 Linhas do Gráfico")
+                        st.markdown("""
+                        - **🔴/🟢 ZONA DE TESTE (Linha Sólida + Grossa)**:  
+                          **Zona de Guerra**. Barreira imediata onde o preço está brigando agora. Se romper, explode.
+                        - **---- ESTRUTURA (Linha Tracejada)**:  
+                          **Paredão de Concreto**. Suporte/Resistência histórico (Memória de 7 dias) com alto volume de defesa.
+                        - **-.-. PSICOLÓGICO (Linha Traço-Ponto)**:  
+                          **Paredão de Vidro**. Nível matemático (ex: $100k) sem histórico de execução real. Pode quebrar fácil.
+                        """)
+                    
+                    with col_leg_metrics:
+                        st.markdown("### 🔢 Métricas do Painel")
+                        st.markdown("""
+                        - **🤖 Probabilidade IA**:  
+                          Nível de certeza da Rede Neural ViViT. **>60%** indica Alta Convicção (Modo Sniper).
+                        - **🌊 Order Flow (OFI)**:  
+                          Saldo de agressão do mercado. **>0** (Compradores no controle) e **<0** (Vendedores no controle). Essencial para validar rompimentos.
+                        - **⚖️ Veredito**:  
+                          Narrativa sintética que cruza IA + Fluxo + Estrutura para validar se a barreira é real ou spoofing.
+                        - **♟️ Estratégia**:  
+                          Ordem final sugerida ao piloto: **Aguardar** (Defesa), **Comprar** ou **Vender** (Ataque).
+                        """)
+
+                st.caption("🕒 **Fuso Horário:** America/Sao_Paulo (Brasília/UTC-3)")
     
                 st.markdown("---")
-                st.caption("🕒 **Fuso Horário:** America/Sao_Paulo (Brasília/UTC-3)")
                 
                 # Motor de Validação de Estrutura v2: Deep Scan, Volatility Step e Layering
                 def render_trading_chart(df_data, title, window, current_live_price, height=500, levels=None, s_color="rgba(0, 230, 118, ", r_color="rgba(255, 82, 82, "):
@@ -156,7 +206,7 @@ def render_live_dashboard(conn, brain):
                                 clustered = []
                                 cluster = [l_list[0]]
                                 for i in range(1, len(l_list)):
-                                    if (l_list[i]['price'] - l_list[i-1]['price']) / l_list[i-1]['price'] <= 0.001:
+                                    if (l_list[i]['price'] - l_list[i-1]['price']) / l_list[i-1]['price'] <= 0.003: # 0.3% Clustering
                                         cluster.append(l_list[i])
                                     else:
                                         avg_p = sum(c['price'] for c in cluster) / len(cluster)
@@ -212,8 +262,8 @@ def render_live_dashboard(conn, brain):
                                 if is_battle: label_final = f"💥 ZONA DE TESTE ({type_label})"
                                 elif lv.get('psicologico'): label_final = f"🧠 PSICOLÓGICO ({type_label})"
     
-                                # Ajuste de Geometria: Intraday para EXATAMENTE na vela atual, Macro para no meio
-                                line_ext = timedelta(0) if window != "1d" else (delta * 0.5)
+                                # Ajuste de Geometria: Linhas terminam EXATAMENTE no último candle
+                                line_ext = timedelta(0)
                                 fig.add_trace(go.Scatter(
                                     x=[candles["dt"].min(), candles["dt"].max() + line_ext], y=[lv['price'], lv['price']],
                                     mode="lines", name=label_final,
@@ -233,8 +283,8 @@ def render_live_dashboard(conn, brain):
                         
                         if len(candles) > 1:
                             last_ts = candles["dt"].max()
-                            # Espaço à direita: 15 candles para evitar corte da última vela
-                            range_end = last_ts + (delta * 15)
+                            # Espaço à direita: Reduzido para 3 candles (evita compressão/candles finos)
+                            range_end = last_ts + (delta * 3)
                             range_start = last_ts - (delta * n_zoom)
                             xaxis_range = [range_start, range_end]
                         else:
@@ -244,19 +294,21 @@ def render_live_dashboard(conn, brain):
                             template="plotly_dark", xaxis_rangeslider_visible=False, 
                             height=500, margin=dict(l=10, r=10, t=10, b=10),
                             legend=dict(orientation="v", yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(0,0,0,0.5)"),
+                            dragmode="pan", # Padrão: Pan para mover o gráfico livremente
+                            uirevision=window, # 🔒 PRESERVA O ZOOM DO USUÁRIO ENTRE RELOADS
                             xaxis=dict(
                                 type="date", # Força escala temporal linear
                                 range=xaxis_range, tickformat="%d/%m %H:%M", tickangle=-45,
                                 showgrid=True, gridcolor="rgba(128, 128, 128, 0.1)"
                             ),
-                            yaxis=dict(fixedrange=False, autorange=True, side="right")
+                            yaxis=dict(fixedrange=False, autorange=True, side="right") # Zoom Vertical Habilitado
                         )
                         
                         # Configuração de Zoom Independente e Modebar
                         st.plotly_chart(fig, width='stretch', key=f"chart_{window}", config={
-                            'scrollZoom': True,
+                            'scrollZoom': True, # Permite zoom com scroll do mouse
                             'displayModeBar': True,
-                            'modeBarButtonsToAdd': ['drawline', 'drawopenpath', 'drawclosedpath', 'drawcircle', 'drawrect', 'eraselayer']
+                            'modeBarButtonsToAdd': ['drawline', 'drawopenpath', 'drawcircle', 'drawrect', 'eraseshape', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'resetScale2d']
                         })
     
                 # 3. Sequência de Gráficos (15m, 1h, 4h, 1d)
@@ -283,13 +335,36 @@ def render_live_dashboard(conn, brain):
             
             else:
                 st.warning("⏳ **DADOS INSUFICIENTES**, o sistema ainda não processou o histórico necessário, logo aguarde a conclusão da análise.")
+            
+            # --- 🚦 DIÁRIO DE EXECUÇÃO REAL (Sniper Log) ---
+            st.markdown("---")
+            st.markdown("### 🎯 Diário de Execução Real (Tiros do Sniper)")
+            st.caption("Apenas operações válidas (Compra/Venda) são registradas aqui. O P&L é calculado após 15 minutos (1 candle) da entrada.")
+            
+            df_log = validator.get_log()
+            if not df_log.empty:
+                # Layout Otimizado com Styler
+                st.dataframe(
+                    df_log.style
+                    .map(lambda x: "color: #00ff00; font-weight: bold" if x > 0 else ("color: #ff4444; font-weight: bold" if x < 0 else "color: gray"), subset=["pl_est"])
+                    .map(lambda x: "color: #00ff00" if x > 0 else "color: #ff4444", subset=["ofi"])
+                    .map(lambda x: "background-color: #1a4d1a" if "WIN" in str(x) else ("background-color: #4d1a1a" if "LOSS" in str(x) else ""), subset=["result"])
+                    .format({"confidence": "{:.1%}", "price": "${:,.2f}", "ofi": "{:.4f}", "pl_est": "{:+.2f}%"}),
+                    use_container_width=True,
+                    height=300,
+                    hide_index=True
+                )
+            else:
+                st.info("⏳ Aguardando primeira oportunidade clara de tiro (Sniper em Espera)...")
+
         else:
             st.warning("⏳ **SISTEMA EM WARM-UP**, o buffer de mercado ainda está sendo preenchido, logo o cockpit estará operacional em breve.")
     finally:
         st.session_state.analyzing = False
 
 # Execução do Dashboard
+# Execução do Dashboard
 if st.checkbox("🔴 SISTEMA LIGADO", value=True):
-    render_live_dashboard(conn_obj, brain_obj)
+    render_live_dashboard(conn_obj, brain_obj, val_obj)
 else:
     st.info("💡 **SISTEMA EM STANDBY**, o monitoramento em tempo real está pausado, logo ligue o interruptor acima para iniciar.")

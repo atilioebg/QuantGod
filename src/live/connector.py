@@ -5,6 +5,7 @@ from collections import deque
 import polars as pl
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
 from binance.spot import Spot
+import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +20,10 @@ class BinanceConnector:
 
     def _on_message(self, _, message):
         try:
+            # Correção Crítica: Parse JSON se for string
+            if isinstance(message, str):
+                message = json.loads(message)
+
             if 'e' in message and message['e'] == 'aggTrade':
                 trade = {
                     'price': float(message['p']),

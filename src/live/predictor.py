@@ -11,7 +11,99 @@ from src.processing.simulation import build_simulated_book
 from src.processing.tensor_builder import build_tensor_4d
 from src.models.vivit import SAIMPViViT
 
+from datetime import datetime
+import pandas as pd
+
 logger = logging.getLogger("SAIMP.SniperBrain")
+
+class PredictionValidator:
+    def __init__(self, log_path="data/prediction_log.csv"):
+        self.log_path = Path(log_path)
+        self.log_path.parent.mkdir(exist_ok=True, parents=True)
+        if not self.log_path.exists():
+            df = pd.DataFrame(columns=[
+                "timestamp", "price", "signal", "confidence", 
+                "ofi", "verdict", "strategy", "result", "pl_est"
+            ])
+            df.to_csv(self.log_path, index=False)
+
+    def register_prediction(self, price, signal, confidence, ofi, verdict, strategy):
+        try:
+            # 1. Filtro de Gatilho (Trigger Logic - Sem Spam)
+            strat_upper = str(strategy).upper()
+            if "AGUARDAR" in strat_upper or "NEUTRO" in strat_upper:
+                return False # Ignora ruído
+
+            # Lógica de Resultado Visual
+            res_val = "⏳ (PENDING)"
+
+            new_row = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "price": price,
+                "signal": signal,
+                "confidence": confidence,
+                "ofi": ofi,
+                "verdict": verdict,
+                "strategy": strategy,
+                "result": res_val,
+                "pl_est": 0.0
+            }
+            
+            # Append atomicamente
+            df = pd.DataFrame([new_row])
+            df.to_csv(self.log_path, mode='a', header=False, index=False)
+            return True
+        except Exception as e:
+            logger.error(f"❌ Falha ao registrar predição: {e}")
+            return False
+
+    def process_pending_outcomes(self, current_price, current_time=None):
+        """Atualiza o resultado (P&L) de ordens pendentes após 15 minutos."""
+        if not self.log_path.exists(): return
+        
+        try:
+            df = pd.read_csv(self.log_path)
+            if df.empty: return
+            
+            if "pl_est" not in df.columns: df["pl_est"] = 0.0 # Migração
+            
+            updated = False
+            now = current_time if current_time else datetime.now()
+            
+            for idx, row in df.iterrows():
+                if "PENDING" in str(row["result"]):
+                    try:
+                        entry_time = datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S")
+                        elapsed = (now - entry_time).total_seconds() / 60 # minutos
+                        
+                        if elapsed >= 15: # 1 Candle Completo
+                            entry_price = float(row["price"])
+                            signal = str(row["signal"]).upper()
+                            
+                            # Cálculo P&L
+                            if "COMPRA" in signal:
+                                pl_pct = ((current_price - entry_price) / entry_price) * 100
+                            elif "VENDA" in signal:
+                                pl_pct = ((entry_price - current_price) / entry_price) * 100
+                            else: pl_pct = 0.0
+                            
+                            # Veredito
+                            outcome = "✅ WIN" if pl_pct > 0 else "❌ LOSS"
+                            
+                            df.at[idx, "result"] = outcome
+                            df.at[idx, "pl_est"] = round(pl_pct, 2)
+                            updated = True
+                    except Exception: pass
+            
+            if updated:
+                df.to_csv(self.log_path, index=False)
+        except Exception as e:
+            logger.error(f"Erro ao processar P&L: {e}")
+
+    def get_log(self):
+        if self.log_path.exists():
+            return pd.read_csv(self.log_path).sort_values("timestamp", ascending=False)
+        return pd.DataFrame()
 
 class SniperBrain:
     def __init__(self, model_path="data/saimp_best.pth"):
@@ -98,6 +190,11 @@ class SniperBrain:
             
             current_price = df_trades["price"][-1]
             last_ofi_total = last_rows["ofi_level"].sum()
+            
+            # DEBUG CRÍTICO OFI ZERO
+            logger.info(f"📊 DEBUG OFI: SnapshotTime={last_snap_time} | Rows={last_rows.height} | OFI_Total={last_ofi_total:.4f}")
+            if last_ofi_total == 0.0:
+                logger.warning("⚠️ ALERTA: OFI Zerado identificado! Verifique ingestão de trades.")
             
             # Lógica de Tendência Granular
             if last_ofi_total > 0.1: trend = "Alta"
