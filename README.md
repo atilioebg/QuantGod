@@ -1,20 +1,16 @@
-# 🧠 SAIMP: Single Artificial Intelligence Market Predictor
+# 🧠 BTCR: Deep Market Intelligence & Sniper Decision Engine
 
-> **Versão**: 5.3 (The Monolith Edition)  
-> **Status**: 🟢 Em Desenvolvimento (Treinamento & Validação)  
-> **Dependência**: PyTorch + Polars + CUDA  
-> **Filosofia**: "O Mercado não é uma linha 2D, é uma topografia 4D."
+> **Versão**: 5.4 (The Monolith Edition - Execution Diary)  
+> **Status**: 🟢 Operacional (Coleta em Tempo Real & Auditoria)  
+> **Filosofia**: "O Mercado não é uma linha 2D, é uma topografia 4D moldada pelo fluxo de ordens."
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)
-![PyTorch](https://img.shields.io/badge/pytorch-2.1%2B-red.svg)
-![Architecture](https://img.shields.io/badge/architecture-ViViT%20Transformers-purple.svg)
+O **BTCR (Bitcoin Transformer Decision Engine)** é um sistema de inteligência artificial de alta performance projetado para decodificar a microestrutura do mercado e identificar **rompimentos estruturais** com alta precisão. Utilizando uma arquitetura de visão computacional adaptada (**ViViT Transformers**), o sistema trata o histórico de preços e o fluxo de ordens como quadros de um vídeo, identificando padrões complexos de agressão e exaustão.
 
 ---
 
 ## 📋 Índice Mestre
 
-1.  [Introdução e Filosofia (GeoAI)](#1-introdução-e-filosofia-geoai)
+1.  [Introdução e Capacidades do Modelo](#-introdução-e-capacidades-do-modelo)
 2.  [Arquitetura do Sistema](#2-arquitetura-do-sistema)
 3.  [Capítulo I: Coleta de Dados (Data Ingestion)](#3-capítulo-i-coleta-de-dados)
 4.  [Capítulo II: Estruturação e Simulação (Refinaria)](#4-capítulo-ii-estruturação-e-simulação)
@@ -22,26 +18,32 @@
 6.  [Capítulo IV: O Cérebro (SAIMPViViT)](#6-capítulo-iv-o-cérebro-saimpvivit)
 7.  [Capítulo V: Testes e Qualidade (QA)](#7-capítulo-v-testes-e-qualidade)
 8.  [Capítulo VI: Cockpit Operacional (Live Trading)](#8-capítulo-vi-cockpit-operacional-live-trading)
+    - [8.1 Diário de Execução (Sniper Shots)](#81-diário-de-execução-sniper-shots)
 9.  [Guia de Instalação e Configuração](#9-guia-de-instalação-e-configuração)
-10. [Manual de Operação](#10-manual-de-operação)
+10. [Manual de Operação](#10-manual-de-opereração)
 11. [Estrutura do Projeto](#11-estrutura-do-projeto)
 12. [Roadmap e Próximos Passos](#12-roadmap-e-próximos-passos)
 
 ---
 
-## 1. Introdução e Filosofia (GeoAI)
+## 📖 Introdução e Capacidades do Modelo
 
-**SAIMP** é um sistema de Inteligência Artificial projetado para decodificar a microestrutura do mercado de criptomoedas (Binance Futures) e identificar oportunidades de *Swing Trade* com alta precisão.
+### 🎯 O que este Modelo Faz?
+Ele opera como um **Analista de Microestrutura Autônomo**. O sistema captura cada trade individual através do WebSocket da Binance e reconstrói o **Order Flow Index (OFI)** em tempo real. Esses dados são convertidos em tensores espaciais-temporais que o "Brain" (SniperBrain) processa para identificar o momento exato em que a agressão (Takers) supera a liquidez passiva (Makers).
 
-### 🚀 O Problema
-A maioria dos modelos financeiros falha porque olha para o mercado como uma simples linha 2D (Preço x Tempo). Eles ignoram a **liquidez** (Order Book), que é o terreno onde o preço se move.
+### ✅ O que ele Preve?
+*   **Direcionalidade de Alta Convicção**: Identifica se a probabilidade estatística favorece uma **Compra (Long)** ou **Venda (Short)**.
+*   **Rompimentos Reais vs. Falsos**: Cruza a predição da Rede Neural com o OFI bruto para validar se um movimento de preço tem "combustível" real ou se é apenas uma armadilha de liquidez (*Spoofing*).
+*   **Janela de Alvo**: O modelo é treinado sob a metodologia *Triple Barrier*, buscando prever se o mercado atingirá um alvo de **1.5% (Gain)** antes de recuar **0.75% (Stop)**.
 
-### 💡 A Solução: GeoAI & Visão 4D
-Tratamos o mercado como um problema de **Visão Computacional**.
-*   **Topografia (Order Book)**: As "montanhas" de liquidez passiva (Limit Orders) que oferecem resistência e suporte.
-*   **Erosão (Execuções)**: O "fluxo de água" (Market Orders) que consome a liquidez e molda o terreno.
+### 🔭 Horizonte de Visão: Até onde ele enxerga?
+*   **Memória Contextual (Lookback)**: O modelo analisa as últimas **8 horas** de dados (`SEQ_LEN=32`) para entender a construção da tendência atual e a memória dos níveis de suporte e resistência.
+*   **Janela de Previsão (Lookahead)**: Sua inferência é focada em um horizonte de **4 horas** (`LABEL_WINDOW_HOURS`). É o tempo estimado para que a tese de rompimento ou defesa se concreteize.
 
-O objetivo da IA é assistir a esse "vídeo" geológico e prever onde ocorrerão os próximos deslizamentos de terra (rompimentos de preço).
+### ❌ O que ele NÃO Preve?
+*   **Fundamentos e Notícias**: O modelo é puramente técnico/quantitativo. Ele não enxerga notícias externas, tweets ou decisões de bancos centrais.
+*   **Scalping de Segundos**: Não é um robô de arbitragem ou de frequência ultrarrápida. Ele busca movimentos sólidos com alvo de ~1.5%.
+*   **Cisnes Negros**: Eventos globais extremos que geram volatilidade irracional e instantânea podem invalidar a análise estrutural clássica.
 
 ---
 
@@ -402,6 +404,13 @@ Para visualizar as decisões da IA em tempo real com interface visual:
 streamlit run src/dashboard/app.py
 ```
 
+### 8.1 Diário de Execução (Sniper Shots)
+O sistema possui um mecanismo de **Autenticação de Resultado** integrado:
+*   **Log de Telemetria**: Salvo em `data/prediction_log.csv`.
+*   **Filtro Sniper**: O sistema ignora ruídos ("Neutro") e registra apenas entradas reais de Compra/Venda.
+*   **Auditoria Automática**: Passados 15 minutos de uma entrada, o validador compara o preço de saída com o de entrada e calcula o **P&L (Profit & Loss)** real, classificando o trade como `WIN` ou `LOSS`.
+*   **Visualização**: Exibida no dashboard na tabela "🎯 Diário de Execução (Tiros do Sniper)".
+
 ### Ajuste Fino (Tunning)
 Edite `src/config.py` para alterar:
 *   Horizonte de Previsão (`LABEL_WINDOW_HOURS`)
@@ -454,12 +463,13 @@ Este é o guia definitivo para levar o projeto do estágio "Protótipo Funcional
      - O velocímetro de probabilidade oscila (está vivo) ou travou?
    - **Meta**: Zero erros de conexão ou estouro de memória (RAM/VRAM).
 
-2. **Paper Trading Visual (Acurácia)**
-   - **Ação**: Quando aparecer um sinal 🟢 ou 🔴 com confiança > 50%:
-     - Anote o preço e o horário.
-     - Volte 4 horas depois.
-   - **Resultado**: O preço foi para o alvo (Lucro) ou contra (Prejuízo)?
-   - **Meta**: Confirmar se a "visão" da IA está alinhada com a realidade do mercado atual.
+   - **Meta**: Zero erros de conexão ou estouro de memória (RAM/VRAM).
+
+2. **Paper Trading Automatizado (Acurácia)**
+   - **Status**: ✅ **AUTOMATIZADO**.
+   - **Como funciona**: O robô agora registra suas próprias previsões no `data/prediction_log.csv` e valida o resultado (WIN/LOSS) sozinho.
+   - **Ação**: Basta monitorar a aba "Diário de Execução" no Dashboard.
+   - **Meta**: Validar se o Win Rate estatístico está alinhado com o esperado antes de liberar capital real.
 
 ### ☁️ FASE 2: INFRAESTRUTURA & DADOS PREMIUM
 **Objetivo**: Profissionalizar a execução (sair do PC Gamer) e refinar a "gasolina" do modelo.
