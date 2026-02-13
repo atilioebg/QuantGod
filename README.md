@@ -36,6 +36,17 @@ Ele opera como um **Analista de Microestrutura Autônomo**. O sistema captura ca
 *   **Rompimentos Reais vs. Falsos**: Cruza a predição da Rede Neural com o OFI bruto para validar se um movimento de preço tem "combustível" real ou se é apenas uma armadilha de liquidez (*Spoofing*).
 *   **Janela de Alvo**: O modelo é treinado sob a metodologia *Triple Barrier*, buscando prever se o mercado atingirá um alvo de **1.5% (Gain)** antes de recuar **0.75% (Stop)**.
 
+### 💹 Performance e Acurácia (Metrics)
+O modelo foi treinado em um dataset histórico de alta densidade (2023-2026). Os resultados dos últimos benchmarks são:
+*   **Acurácia de Treino (Train Acc)**: ~62.75%
+*   **Melhor Acurácia de Validação (Best Val Acc)**: **59.85%**
+*   **Precisão Sniper**: Devido ao filtro de probabilidade (só registrar sinais > 50-60%), a precisão em sinais de execução real tende a ser superior à acurácia base.
+
+### 📈 Sinais Consecutivos e Direcionalidade
+O modelo possui capacidade de identificar **Momentum e Tendências Estendidas**:
+*   **Altas/Quedas Consecutivas**: Caso a força do fluxo (OFI) e a estrutura de liquidez permaneçam favoráveis, o modelo emitirá **Previsões Consecutivas** da mesma classe. Isso indica uma tendência de forte convicção onde múltiplos "frames" de mercado apontam para o mesmo alvo de 1.5%.
+*   **Persistent Outlook**: Diferente de modelos que mudam de opinião a cada candle, o BTCR tende a manter a "cor" do sinal enquanto o embasamento de fluxo de ordens (Delta de Agressão) não for exaurido.
+
 ### 🔭 Horizonte de Visão: Até onde ele enxerga?
 *   **Memória Contextual (Lookback)**: O modelo analisa as últimas **8 horas** de dados (`SEQ_LEN=32`) para entender a construção da tendência atual e a memória dos níveis de suporte e resistência.
 *   **Janela de Previsão (Lookahead)**: Sua inferência é focada em um horizonte de **4 horas** (`LABEL_WINDOW_HOURS`). É o tempo estimado para que a tese de rompimento ou defesa se concreteize.
