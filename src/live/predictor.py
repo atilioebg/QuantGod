@@ -39,23 +39,21 @@ class PredictionValidator:
         try:
             now = datetime.now()
             
-            # 1. Filtro de Gatilho (Trigger Logic)
+            # 1. Filtro de Tipo de Sinal
             strat_upper = str(strategy).upper()
             is_neutral = "AGUARDAR" in strat_upper or "NEUTRO" in strat_upper
             
             # --- LÓGICA DE HEARTBEAT (Prova de Vida) ---
-            elapsed_heartbeat = (now - self.last_heartbeat).total_seconds() / 3600 # horas
-            if is_neutral and elapsed_heartbeat >= 4.0:
+            # Se já passou 4h, forçamos um log independente de qualquer trava
+            elapsed_heartbeat = (now - self.last_heartbeat).total_seconds() / 3600
+            if elapsed_heartbeat >= 4.0:
                 self._write_log(now, price, signal, confidence, ofi, verdict, "💓 HEARTBEAT", "⚪ (STATUS)")
                 self.last_heartbeat = now
                 return True
-            
-            if is_neutral:
-                self.consecutive_count = 0
-                self.last_signal = None
-                return False
 
-            # --- LÓGICA DE CONFIRMAÇÃO (3 Ciclos = ~30s) ---
+            # --- LÓGICA DE CONFIRMAÇÃO (Debounce - 3 Ciclos) ---
+            # Aplicamos a confirmação de 3 ciclos para QUALQUER sinal (incluindo Neutro)
+            # para garantir que a mudança de estado é estável.
             if signal == self.last_signal:
                 self.consecutive_count += 1
             else:
@@ -63,23 +61,45 @@ class PredictionValidator:
                 self.consecutive_count = 1
                 
             if self.consecutive_count < 3:
-                return False # Aguardando confirmação
+                return False # Aguardando o sinal estabilizar
 
-            # --- LÓGICA DE COOLDOWN (14m 30s) ---
+            # --- LÓGICA DE MUDANÇA DE ESTADO / COOLDOWN ---
+            # Estados: 0 (Neutro), 1 (Venda), 2 (Compra)
             elapsed_log = (now - self.last_log_timestamp).total_seconds()
-            is_new_direction = (signal != self.last_logged_signal)
             
-            # Só loga se: Mudou a direção OU passou o tempo de cooldown
-            if is_new_direction or elapsed_log >= 870: # 870s = 14min 30s
-                self._write_log(now, price, signal, confidence, ofi, verdict, strategy, "⏳ (PENDING)")
+            # Mudança de Estado: O sinal atual estabilizado é diferente do último que logamos?
+            is_state_change = (signal != self.last_logged_signal)
+            
+            # Regras para Gravar:
+            # A) Mudou o estado (ex: de Compra para Neutro, ou Neutro para Venda) - GRAVA NA HORA
+            # B) O estado é o mesmo, mas passou o Cooldown de 14m30s (Manutenção de Perspectiva) - GRAVA
+            # C) Se for NEUTRO, só gravamos a mudança inicial (não repetimos a cada 14m30s para não poluir)
+            
+            should_log = False
+            log_strategy = strategy
+            log_result = "⏳ (PENDING)"
+
+            if is_state_change:
+                should_log = True
+                if is_neutral:
+                    log_result = "⚪ (NEUTRAL)"
+            elif not is_neutral and elapsed_log >= 870:
+                # Se ainda está em sinal ativo (Buy/Sell), renova o log a cada 14:30
+                should_log = True
+                log_strategy = f"🔄 PERSIST: {strategy}"
+
+            if should_log:
+                self._write_log(now, price, signal, confidence, ofi, verdict, log_strategy, log_result)
                 self.last_log_timestamp = now
                 self.last_logged_signal = signal
-                self.last_heartbeat = now # Reset heartbeat ao operar
+                self.last_heartbeat = now # Reset heartbeat ao ter atividade de log
                 return True
                 
             return False
         except Exception as e:
             logger.error(f"❌ Falha ao registrar predição: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return False
 
     def _write_log(self, dt, price, signal, confidence, ofi, verdict, strategy, result):
