@@ -415,11 +415,15 @@ Para visualizar as decisões da IA em tempo real com interface visual:
 streamlit run src/dashboard/app.py
 ```
 
-### 8.1 Diário de Execução (Sniper Shots)
-O sistema possui um mecanismo de **Autenticação de Resultado** integrado:
+### 8.1 Diário de Execução & Telemetria (A Máquina de Estados)
+O sistema possui um mecanismo de **Autenticação de Resultado** e **Auditabilidade Contínua** de alto nível para garantir que "A Fonte da Verdade" seja preservada:
+
 *   **Log de Telemetria**: Salvo em `data/prediction_log.csv`.
-*   **Filtro Sniper**: O sistema ignora ruídos ("Neutro") e registra apenas entradas reais de Compra/Venda.
-*   **Auditoria Automática**: Passados 15 minutos de uma entrada, o validador compara o preço de saída com o de entrada e calcula o **P&L (Profit & Loss)** real, classificando o trade como `WIN` ou `LOSS`.
+*   **Confirmação de Sinal (Anti-Ruído)**: O sistema só oficializa um registro após o sinal se manter estável por **3 ciclos consecutivos** (~30s), eliminando falsos gatilhos causados por trades isolados.
+*   **Log de Mudança de Estado**: Diferente de logs comuns, o BTCR registra cada transição de sentimento (ex: `NEUTRO` → `COMPRA`, `COMPRA` → `NEUTRO`, `VENDA` → `COMPRA`). Isso cria uma linha do tempo clara da tomada de decisão.
+*   **Silenciador Sniper (Cooldown)**: Para evitar poluição, após registrar uma direção, o sistema silencia logs repetidos por **14m 30s** (sincronizado com os ciclos de 15m), a menos que o estado mude antes disso.
+*   **Heartbeat Monitor (Pulso Vital)**: Mesmo em mercados sem volatilidade, o sistema grava um log de status (`💓 HEARTBEAT`) a cada **4 horas**, garantindo que a telemetria comprove o funcionamento ininterrupto da IA.
+*   **Auditoria Automática**: Passados 15 minutos de uma entrada detectada, o validador compara o preço atual com o de entrada e calcula o **P&L (Profit & Loss)** real, classificando o trade como `WIN` ou `LOSS`.
 *   **Visualização**: Exibida no dashboard na tabela "🎯 Diário de Execução (Tiros do Sniper)".
 
 ### Ajuste Fino (Tunning)
