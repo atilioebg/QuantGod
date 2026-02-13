@@ -25,8 +25,7 @@ class PredictionValidator:
                 "timestamp", "price", "signal", "confidence", 
                 "ofi", "verdict", "strategy", "result", "pl_est"
             ])
-            df.to_csv(self.log_path, index=False)
-            df.to_csv(self.log_path, index=False)
+            df.to_csv(self.log_path, index=False, encoding='utf-8-sig')
         self.last_heartbeat = datetime.now()
         
         # --- ESTADOS DE VALIDAÇÃO (Debounce & Cooldown) ---
@@ -116,14 +115,14 @@ class PredictionValidator:
             "pl_est": 0.0
         }
         df = pd.DataFrame([new_row])
-        df.to_csv(self.log_path, mode='a', header=False, index=False)
+        df.to_csv(self.log_path, mode='a', header=False, index=False, encoding='utf-8-sig')
 
     def process_pending_outcomes(self, current_price, current_time=None):
         """Atualiza o resultado (P&L) de ordens pendentes após 15 minutos."""
         if not self.log_path.exists(): return
         
         try:
-            df = pd.read_csv(self.log_path)
+            df = pd.read_csv(self.log_path, encoding='utf-8-sig')
             if df.empty: return
             
             if "pl_est" not in df.columns: df["pl_est"] = 0.0 # Migração
@@ -157,13 +156,16 @@ class PredictionValidator:
                     except Exception: pass
             
             if updated:
-                df.to_csv(self.log_path, index=False)
+                df.to_csv(self.log_path, index=False, encoding='utf-8-sig')
         except Exception as e:
             logger.error(f"Erro ao processar P&L: {e}")
 
     def get_log(self):
         if self.log_path.exists():
-            return pd.read_csv(self.log_path).sort_values("timestamp", ascending=False)
+            try:
+                return pd.read_csv(self.log_path, encoding='utf-8-sig').sort_values("timestamp", ascending=False)
+            except:
+                return pd.read_csv(self.log_path).sort_values("timestamp", ascending=False)
         return pd.DataFrame()
 
 class SniperBrain:
