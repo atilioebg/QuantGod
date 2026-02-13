@@ -26,54 +26,77 @@ class PredictionValidator:
                 "ofi", "verdict", "strategy", "result", "pl_est"
             ])
             df.to_csv(self.log_path, index=False)
+            df.to_csv(self.log_path, index=False)
         self.last_heartbeat = datetime.now()
+        
+        # --- ESTADOS DE VALIDAÇÃO (Debounce & Cooldown) ---
+        self.last_signal = None
+        self.consecutive_count = 0
+        self.last_logged_signal = None
+        self.last_log_timestamp = datetime(2000, 1, 1) # Passado distante
 
     def register_prediction(self, price, signal, confidence, ofi, verdict, strategy):
         try:
             now = datetime.now()
-            elapsed_heartbeat = (now - self.last_heartbeat).total_seconds() / 3600 # horas
             
             # 1. Filtro de Gatilho (Trigger Logic)
             strat_upper = str(strategy).upper()
             is_neutral = "AGUARDAR" in strat_upper or "NEUTRO" in strat_upper
             
-            # Se for neutro MAS passou 4h, forçamos o log como Heartbeat
-            is_heartbeat = False
+            # --- LÓGICA DE HEARTBEAT (Prova de Vida) ---
+            elapsed_heartbeat = (now - self.last_heartbeat).total_seconds() / 3600 # horas
             if is_neutral and elapsed_heartbeat >= 4.0:
-                is_heartbeat = True
-                strategy = "💓 HEARTBEAT"
+                self._write_log(now, price, signal, confidence, ofi, verdict, "💓 HEARTBEAT", "⚪ (STATUS)")
                 self.last_heartbeat = now
-            elif is_neutral:
-                # Neutro comum: ignora
+                return True
+            
+            if is_neutral:
+                self.consecutive_count = 0
+                self.last_signal = None
                 return False
 
-            # Lógica de Resultado Visual
-            res_val = "⏳ (PENDING)" if not is_heartbeat else "⚪ (STATUS)"
-
-            new_row = {
-                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
-                "price": price,
-                "signal": signal,
-                "confidence": confidence,
-                "ofi": ofi,
-                "verdict": verdict,
-                "strategy": strategy,
-                "result": res_val,
-                "pl_est": 0.0
-            }
-            
-            # Append atomicamente
-            df = pd.DataFrame([new_row])
-            df.to_csv(self.log_path, mode='a', header=False, index=False)
-            
-            if not is_heartbeat:
-                # Se foi um sinal real (não heartbeat), resetamos o timer do heartbeat também
-                self.last_heartbeat = now
+            # --- LÓGICA DE CONFIRMAÇÃO (3 Ciclos = ~30s) ---
+            if signal == self.last_signal:
+                self.consecutive_count += 1
+            else:
+                self.last_signal = signal
+                self.consecutive_count = 1
                 
-            return True
+            if self.consecutive_count < 3:
+                return False # Aguardando confirmação
+
+            # --- LÓGICA DE COOLDOWN (14m 30s) ---
+            elapsed_log = (now - self.last_log_timestamp).total_seconds()
+            is_new_direction = (signal != self.last_logged_signal)
+            
+            # Só loga se: Mudou a direção OU passou o tempo de cooldown
+            if is_new_direction or elapsed_log >= 870: # 870s = 14min 30s
+                self._write_log(now, price, signal, confidence, ofi, verdict, strategy, "⏳ (PENDING)")
+                self.last_log_timestamp = now
+                self.last_logged_signal = signal
+                self.last_heartbeat = now # Reset heartbeat ao operar
+                return True
+                
+            return False
         except Exception as e:
             logger.error(f"❌ Falha ao registrar predição: {e}")
             return False
+
+    def _write_log(self, dt, price, signal, confidence, ofi, verdict, strategy, result):
+        """Auxiliar de escrita atômica no CSV."""
+        new_row = {
+            "timestamp": dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "price": price,
+            "signal": signal,
+            "confidence": confidence,
+            "ofi": ofi,
+            "verdict": verdict,
+            "strategy": strategy,
+            "result": result,
+            "pl_est": 0.0
+        }
+        df = pd.DataFrame([new_row])
+        df.to_csv(self.log_path, mode='a', header=False, index=False)
 
     def process_pending_outcomes(self, current_price, current_time=None):
         """Atualiza o resultado (P&L) de ordens pendentes após 15 minutos."""
