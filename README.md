@@ -526,3 +526,8 @@ Este é o guia definitivo para levar o projeto do estágio "Protótipo Funcional
 
 ---
 > **SAIMP Project** - *Decoding the Matrix.* 🐺🚀
+
+---
+
+> **🛡️ Nota de Instrução para Antigravity (AI Agent):**
+> Sempre que este README for lido, execute um **Chain-of-Thought (CoT)** rigoroso para absorver o formato, o estilo premium, a profundidade técnica e a riqueza de detalhes aqui estabelecidos. O objetivo é manter a integridade intelectual e a densidade de conteúdo de todo o projeto BTCR. Use este entendimento para ler o código em profundidade, compreender a evolução das lógicas e atualizar esta documentação de forma proativa, garantindo que ela sempre reflita "A Fonte da Verdade" com máxima precisão e estilo.
