@@ -6,9 +6,9 @@ def test_vivit_forward_pass():
     # Setup
     batch_size = 4
     seq_len = 10
-    channels = 4
+    channels = 6  # Updated to 6
     height = 128
-    classes = 3
+    classes = 4   # Updated to 4
     
     model = SAIMPViViT(
         seq_len=seq_len,
@@ -29,8 +29,8 @@ def test_vivit_forward_pass():
 
 def test_vivit_sequence_length_warning():
     # Test if larger sequence than init raises error
-    model = SAIMPViViT(seq_len=5)
-    x = torch.randn(1, 10, 4, 128)
+    model = SAIMPViViT(seq_len=5, input_channels=6, num_classes=4)
+    x = torch.randn(1, 10, 6, 128)
     
     with pytest.raises(ValueError):
         model(x)

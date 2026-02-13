@@ -16,4 +16,7 @@ binance-connector>=3.0.0
 einops>=0.7.0
 plotly>=5.18.0
 nbformat>=5.9.0
+PyWavelets
+pandas_ta
+xgboost
 

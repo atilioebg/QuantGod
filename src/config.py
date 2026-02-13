@@ -28,18 +28,18 @@ class Settings(BaseSettings):
     # ============================================================================
     # DATA CONFIGURATION (Configuração de Dados)
     # ============================================================================
-    # Lista de meses para usar no Treinamento (Filtro por arquivo)
-    TRAIN_MONTHS: List[str] = ["2025-11", "2025-12"]
-    # Lista de meses para usar na Validação (Filtro por arquivo)
-    VAL_MONTHS: List[str] = ["2026-01"]
+    # Lista de meses para usar no Treinamento (Exemplo representativo)
+    TRAIN_MONTHS: List[str] = ["2020-01", "2024-10"]
+    # Lista de meses para usar na Validação (Exemplo representativo)
+    VAL_MONTHS: List[str] = ["2024-11", "2026-01"]
     
     # [INTERVALOS DE DATA]
     # Data de início exata para carregar o Dataset de Treino
-    TRAIN_START_DATE: str = "2025-11-01"
+    TRAIN_START_DATE: str = "2020-01-01"
     # Data de fim exata para o Dataset de Treino
-    TRAIN_END_DATE: str = "2025-12-31"
+    TRAIN_END_DATE: str = "2024-10-31"
     # Data de início exata para carregar o Dataset de Validação
-    VAL_START_DATE: str = "2026-01-01"
+    VAL_START_DATE: str = "2024-11-01"
     # Data de fim exata para o Dataset de Validação
     VAL_END_DATE: str = "2026-01-31"
 
@@ -48,11 +48,9 @@ class Settings(BaseSettings):
     # ============================================================================
     # [IMPORTANTE] Tamanho da sequência de entrada (Lookback).
     # O modelo olha para trás SEQ_LEN steps.
-    # Cálculo: 32 steps * 15 minutos = 480 minutos = 8 Horas de contexto.
-    # (Para 4 horas de contexto, use 16)
-    SEQ_LEN: int = 32               
+    # Cálculo: 96 steps * 15 minutos = 1440 minutos = 24 Horas de contexto (Eagle View).
+    SEQ_LEN: int = 96
     
-    # Tamanho do batch físico (Limitado pela VRAM da GPU)
     # Tamanho do batch físico (Limitado pela VRAM da GPU)
     # Ajustado para 3 conforme feedback de consumo.
     BATCH_SIZE: int = 3
@@ -71,30 +69,31 @@ class Settings(BaseSettings):
     WEIGHT_DECAY: float = 1e-5
     
     # Pesos das classes na Loss Function para tratar desbalanceamento.
-    # [Neutro, Venda, Compra]. Penaliza mais o erro nas classes raras (Venda/Compra).
-    CLASS_WEIGHTS: List[float] = [1.0, 15.0, 15.0]
+    # [Neutro, Stop, Long, Super Long].
+    # Penaliza erros nas classes de alta convicção.
+    CLASS_WEIGHTS: List[float] = [1.0, 10.0, 10.0, 20.0]
 
     # ============================================================================
     # MODEL CONFIGURATION (Arquitetura do Modelo VIViT)
     # ============================================================================
-    # Número de canais de entrada no Tensor (ex: Bid, Ask, Volume, OFI)
-    INPUT_CHANNELS: int = 4
+    # Número de canais de entrada no Tensor (Ex: Bids, Asks, OFI, Price, OFI_W, Price_W)
+    INPUT_CHANNELS: int = 6
     # Profundidade do Order Book (níveis de preço)
     PRICE_LEVELS: int = 128
     # Dimensão interna do modelo Transformer
     D_MODEL: int = 128
-    # Número de classes de saída (3: Neutro, Venda, Compra)
-    NUM_CLASSES: int = 3
+    # Número de classes de saída (0: Neutro, 1: Stop, 2: Long, 3: Super Long)
+    NUM_CLASSES: int = 4
 
     # ============================================================================
-    # LABELING CONFIGURATION (Rótulos Triple Barrier)
+    # LABELING CONFIGURATION (Rótulos Hierárquicos)
     # ============================================================================
     # Janela de tempo para calcular o retorno futuro (Horizonte de Previsão)
-    LABEL_WINDOW_HOURS: int = 4
-    # Retorno mínimo necessário para classificar como Compra/Venda (Gain)
-    # 0.015 = 1.5%
-    LABEL_TARGET_PCT: float = 0.015
-    # Retorno máximo contrário aceitável (Stop Loss virtual)
+    LABEL_WINDOW_HOURS: int = 2
+    # Retorno mínimo necessário para classificar como Long (Target)
+    # 0.008 = 0.8%
+    LABEL_TARGET_PCT: float = 0.008
+    # Retorno máximo contrário aceitável (Stop Loss)
     # 0.0075 = 0.75%
     LABEL_STOP_PCT: float = 0.0075
 

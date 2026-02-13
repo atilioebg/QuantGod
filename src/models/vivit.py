@@ -5,13 +5,13 @@ import math
 class SpatialFeatureExtractor(nn.Module):
     """
     O 'Olho' da IA.
-    Analisa um único snapshot (4 canais x 128 níveis) e extrai um vetor de características.
+    Analisa um único snapshot (6 canais x 128 níveis) e extrai um vetor de características.
     Usa Convoluções 1D ao longo do eixo do preço.
     """
-    def __init__(self, input_channels=4, d_model=128):
+    def __init__(self, input_channels=6, d_model=128):
         super().__init__()
         self.conv_layers = nn.Sequential(
-            # Input: (Batch, 4, 128)
+            # Input: (Batch, 6, 128)
             nn.Conv1d(input_channels, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
             nn.ReLU(),
@@ -29,7 +29,7 @@ class SpatialFeatureExtractor(nn.Module):
         )
 
     def forward(self, x):
-        # x shape: (Batch * Time, 4, 128) -> Processamos todos os frames juntos
+        # x shape: (Batch * Time, 6, 128) -> Processamos todos os frames juntos
         x = self.conv_layers(x)
         return x.squeeze(-1) # (Batch * Time, d_model)
 
@@ -37,7 +37,7 @@ class SAIMPViViT(nn.Module):
     """
     Video Vision Transformer para Swing Trade.
     """
-    def __init__(self, seq_len=96, input_channels=4, price_levels=128, d_model=128, nhead=4, num_layers=2, num_classes=3):
+    def __init__(self, seq_len=96, input_channels=6, price_levels=128, d_model=128, nhead=4, num_layers=2, num_classes=4):
         super().__init__()
         
         self.d_model = d_model
@@ -57,7 +57,7 @@ class SAIMPViViT(nn.Module):
             nn.Linear(d_model, 64),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(64, num_classes) # 3 Classes: 0(Neutral), 1(Sell), 2(Buy)
+            nn.Linear(64, num_classes) # 4 Classes: 0(Neutral), 1(Stop), 2(Long), 3(Super Long)
         )
 
     def forward(self, x):

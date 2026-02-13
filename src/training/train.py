@@ -26,8 +26,8 @@ from src.utils.logger import log_memory_usage
 
 from src.config import settings
 from src.processing.simulation import build_simulated_book
-from src.processing.tensor_builder import build_tensor_4d
-from src.processing.labeling import generate_labels
+from src.processing.tensor_builder import build_tensor_6d
+from src.processing.labeling import generate_hierarchical_labels
 from src.models.vivit import SAIMPViViT
 
 # ============================================================================
@@ -163,9 +163,9 @@ class EarlyStopping:
 # CONFIGURATION - Professional ML Engineering
 # ============================================================================
 
-# Chronological Split (80/20) - Full Historical Mode
-TRAIN_MONTHS = generate_month_list("2023-01", "2025-10")
-VAL_MONTHS = generate_month_list("2025-11", "2026-01")
+# Chronological Split (80/20) - Full Historical Mode (2020-2026)
+TRAIN_MONTHS = generate_month_list("2020-01", "2024-10")
+VAL_MONTHS = generate_month_list("2024-11", "2026-01")
 
 print(f"\n[DATA] Full History Setup:")
 print(f"   Treino (Total):    {len(TRAIN_MONTHS)} meses")

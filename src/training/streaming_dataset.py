@@ -92,11 +92,6 @@ class StreamingDataset(IterableDataset):
         # Mas carregar parquet por filtro de linha é complexo sem particionamento hive.
         
         # Vamos assumir a estratégia:
-        # Carregar MÊS inteiro em memória filtrado (Lazy) se possível?
-        # O usuário disse "memória cheia". Se carregar um mês de trades (4GB?) + tensores explode.
-        # Só o trade data talvez caiba. O problema é gerar os tensores de TODO o mês.
-        
-        # Estratégia:
         # Carregar Trades do Mês (Lazy/Scan) -> Filter por Dia -> Collect -> Build Tensor -> Yield -> Free
         pass
 
@@ -209,17 +204,16 @@ class StreamingDataset(IterableDataset):
                         current_date = next_date
                         continue
 
-                    # 2. Labels
+                    # 2. Labels Hierárquicos
                     try:
-                        # window_hours=4, Targets aumentados: 1.5% Gain / 0.75% Stop
-                        df_labels = generate_labels(
+                        df_labels = generate_hierarchical_labels(
                             df_klines, 
                             window_hours=settings.LABEL_WINDOW_HOURS, 
                             target_pct=settings.LABEL_TARGET_PCT, 
                             stop_pct=settings.LABEL_STOP_PCT
                         )
                     except Exception as e:
-                        print(f"   [ERR] Erro no generate_labels: {e}")
+                        print(f"   [ERR] Erro no generate_hierarchical_labels: {e}")
                         current_date = next_date
                         continue
                     
@@ -243,10 +237,9 @@ class StreamingDataset(IterableDataset):
 
                     # 4. Filter Valid Time Range (remove buffer dates from output)
                     
-                    # 5. Build Tensor (Numpy)
-                    # Gera array (N_snapshots, 4, 128)
-                    print(f"      -> Building 4D Tensor...", flush=True)
-                    X_np = build_tensor_4d(dataset_chunk, n_levels=128, is_simulation=True)
+                    # 5. Build Tensor (6D)
+                    print(f"      -> Building 6-channel Tensor...", flush=True)
+                    X_np = build_tensor_6d(dataset_chunk, n_levels=128, is_simulation=True)
                     print(f"      -> Tensor Shape: {X_np.shape}", flush=True)
                     
                     # Validar Labels

@@ -1,77 +1,92 @@
 import polars as pl
 import numpy as np
+import pywt
 
-def build_tensor_4d(data_df: pl.DataFrame, n_levels: int = 128, is_simulation: bool = False) -> np.ndarray:
+def apply_wavelet_denoising(signal: np.ndarray, wavelet: str = 'db4', level: int = 1) -> np.ndarray:
     """
-    Gera Tensor (Time, 4, Height)
+    Aplica denoising via Wavelet (Soft Thresholding).
+    Retorna a aproximação (sinal limpo).
+    """
+    if len(signal) < 2:
+        return signal
+    
+    # Ensure signal is writable (Polars to_numpy can be read-only)
+    if not signal.flags.writeable:
+        signal = signal.copy()
+    
+    # Decomposição
+    coeffs = pywt.wavedec(signal, wavelet, mode='per')
+    
+    # Thresholding nos detalhes (coeffs[1:])
+    sigma = np.median(np.abs(coeffs[-1])) / 0.6745
+    threshold = sigma * np.sqrt(2 * np.log(len(signal)))
+    
+    new_coeffs = [coeffs[0]]
+    for i in range(1, len(coeffs)):
+        new_coeffs.append(pywt.threshold(coeffs[i], threshold, mode='soft'))
+        
+    # Reconstrução
+    denoised = pywt.waverec(new_coeffs, wavelet, mode='per')
+    
+    # Ajuste de tamanho caso waverec retorne 1 elemento a mais
+    return denoised[:len(signal)]
+
+def build_tensor_6d(data_df: pl.DataFrame, n_levels: int = 128, is_simulation: bool = False) -> np.ndarray:
+    """
+    Gera Tensor (Time, 6, Height)
     Canais:
-    0: Bid Liquidity (Log Volume)
-    1: Ask Liquidity (Log Volume)
-    2: OFI (Order Flow Imbalance)
-    3: Activity (Trade Count / Volatility)
+    0: Bids (Liquidez Compra)
+    1: Asks (Liquidez Venda)
+    2: OFI Raw (Fluxo Bruto)
+    3: Price Raw (Preço Bruto)
+    4: OFI Wavelet (Fluxo Estrutural/Limpo)
+    5: Price Wavelet (Preço Estrutural/Limpo)
     """
     if data_df.height == 0:
-        return np.zeros((0, 4, n_levels), dtype=np.float32)
+        return np.zeros((0, 6, n_levels), dtype=np.float32)
 
     tensor_list = []
     
-    # Lógica para Simulação (Dados Históricos)
     if is_simulation:
-        # Agrupa por snapshot_time
-        # partition_by requer Polars mais recente.
         snapshots = data_df.partition_by("snapshot_time", maintain_order=True)
         
         for snap in snapshots:
-            # Pega o preço de referência (fechamento ou médio da janela)
-            # Para simplificar, pegamos o preço onde houve mais volume/atividade
             if snap.height == 0:
                 continue
                 
-            # Identifica preço de referência (ex: preço mais negociado)
-            ref_row = snap.sort("trade_count", descending=True).head(1)
-            if ref_row.height == 0:
-                continue
-                
-            ref_price = ref_row.select("price").item()
-            
-            # Filtra range de preço (+/- 10% ou fixo em levels)
-            # Aqui simplificamos: pegamos os 128 níveis mais ativos ao redor do preço?
-            # O código original dizia "sort by price" e pegava head(n_levels).
-            # Isso pega os MENORES preços se não invertermos?
-            # Vamos ordenar por preço.
             snap = snap.sort("price")
+            rows = snap.head(n_levels)
+            limit = len(rows)
             
             # Inicializa canais
-            ch_bid = np.zeros(n_levels, dtype=np.float32)
-            ch_ask = np.zeros(n_levels, dtype=np.float32)
-            ch_ofi = np.zeros(n_levels, dtype=np.float32)
-            ch_act = np.zeros(n_levels, dtype=np.float32)
+            chs = np.zeros((6, n_levels), dtype=np.float32)
             
-            # Preenchimento simples
-            # Vamos pegar os n_levels disponíveis no snapshot. 
-            # (Em produção idealmente centralizaria no ref_price)
+            # 1. Bids/Asks (Log Liquidity)
+            chs[0, :limit] = np.log1p(rows["bid_vol"].to_numpy())
+            chs[1, :limit] = np.log1p(rows["ask_vol"].to_numpy())
             
-            rows = snap.head(n_levels)
+            # 2. OFI Raw
+            ofi_raw = rows["ofi_level"].to_numpy()
+            chs[2, :limit] = ofi_raw
             
-            # Extrai arrays com to_numpy()
-            vals_bid = np.log1p(rows["bid_vol"].to_numpy())
-            vals_ask = np.log1p(rows["ask_vol"].to_numpy())
-            vals_ofi = rows["ofi_level"].to_numpy() # Não usa log no OFI pois pode ser negativo
-            vals_act = np.log1p(rows["trade_count"].to_numpy())
+            # 3. Price Raw (Normalizado localmente para o tensor)
+            # Como o tensor foca na vizinhança, usamos o desvio relativo ao preço médio do snap
+            prices = rows["price"].to_numpy()
+            avg_price = prices.mean()
+            price_rel = (prices - avg_price) / (avg_price + 1e-9)
+            chs[3, :limit] = price_rel
             
-            limit = len(rows)
-            ch_bid[:limit] = vals_bid
-            ch_ask[:limit] = vals_ask
-            ch_ofi[:limit] = vals_ofi
-            ch_act[:limit] = vals_act
+            # 4. OFI Wavelet
+            chs[4, :limit] = apply_wavelet_denoising(ofi_raw)
             
-            tensor_list.append(np.stack([ch_bid, ch_ask, ch_ofi, ch_act]))
+            # 5. Price Wavelet
+            chs[5, :limit] = apply_wavelet_denoising(price_rel)
+            
+            tensor_list.append(chs)
 
-    # Lógica para Stream Real (Depth Snapshots)
     else:
-        # Mantém a lógica anterior, mas adiciona canais vazios ou derivados
+        # Stream Real
         for row in data_df.iter_rows(named=True):
-            # Bids/Asks vêm como listas de [price, qty]
             try:
                 bids = np.array(row['bids'], dtype=np.float32) if row['bids'] else np.empty((0,2), dtype=np.float32)
                 asks = np.array(row['asks'], dtype=np.float32) if row['asks'] else np.empty((0,2), dtype=np.float32)
@@ -79,37 +94,36 @@ def build_tensor_4d(data_df: pl.DataFrame, n_levels: int = 128, is_simulation: b
                 bids = np.empty((0,2), dtype=np.float32)
                 asks = np.empty((0,2), dtype=np.float32)
             
-            ch_bid = np.zeros(n_levels, dtype=np.float32)
-            ch_ask = np.zeros(n_levels, dtype=np.float32)
-            ch_ofi = np.zeros(n_levels, dtype=np.float32) # Stream simples não tem OFI por nível ainda
-            ch_act = np.zeros(n_levels, dtype=np.float32) # Stream simples não tem activity por nível ainda
-
+            chs = np.zeros((6, n_levels), dtype=np.float32)
+            
             if len(bids) > 0:
                 limit = min(len(bids), n_levels)
-                # Bids usually sorted desc in order book logic, but tensor implies spatial logic?
-                # Let's assume input comes sorted appropriately or we sort if needed.
-                # Assuming raw lists: usually sorted.
-                ch_bid[:limit] = np.log1p(bids[:limit, 1])
+                chs[0, :limit] = np.log1p(bids[:limit, 1])
             
             if len(asks) > 0:
                 limit = min(len(asks), n_levels)
-                ch_ask[:limit] = np.log1p(asks[:limit, 1])
+                chs[1, :limit] = np.log1p(asks[:limit, 1])
                 
-            tensor_list.append(np.stack([ch_bid, ch_ask, ch_ofi, ch_act]))
+            # Nota: OFI e Price em Stream requerem lógica de agregação prévia
+            # Por enquanto, preenchemos com 0 se não houver dados, aguardando processor.py
+            
+            tensor_list.append(chs)
 
-    # Final Normalization & Clipping
     tensor = np.array(tensor_list, dtype=np.float32)
     
     if tensor.shape[0] > 0:
-        # Channels 0 (Bid), 1 (Ask), 3 (Activity) -> Log values, scale by 0.1
-        tensor[:, 0, :] /= 10.0
-        tensor[:, 1, :] /= 10.0
-        tensor[:, 3, :] /= 10.0
+        # Normalização específica por canal
+        tensor[:, 0, :] /= 10.0 # Bids
+        tensor[:, 1, :] /= 10.0 # Asks
         
-        # Channel 2 (OFI) -> Tanh compression
+        # OFI Raw & Wavelet (2 e 4) -> Tanh compression
         tensor[:, 2, :] = np.tanh(tensor[:, 2, :] / 10.0)
+        tensor[:, 4, :] = np.tanh(tensor[:, 4, :] / 10.0)
         
-        # Global Clip Security
+        # Price Raw & Wavelet (3 e 5) -> Scale (já estão em retorno relativo)
+        tensor[:, 3, :] *= 100.0
+        tensor[:, 5, :] *= 100.0
+        
         tensor = np.clip(tensor, -1.0, 1.0)
 
     return tensor
