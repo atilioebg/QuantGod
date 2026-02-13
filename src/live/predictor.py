@@ -26,19 +26,32 @@ class PredictionValidator:
                 "ofi", "verdict", "strategy", "result", "pl_est"
             ])
             df.to_csv(self.log_path, index=False)
+        self.last_heartbeat = datetime.now()
 
     def register_prediction(self, price, signal, confidence, ofi, verdict, strategy):
         try:
-            # 1. Filtro de Gatilho (Trigger Logic - Sem Spam)
+            now = datetime.now()
+            elapsed_heartbeat = (now - self.last_heartbeat).total_seconds() / 3600 # horas
+            
+            # 1. Filtro de Gatilho (Trigger Logic)
             strat_upper = str(strategy).upper()
-            if "AGUARDAR" in strat_upper or "NEUTRO" in strat_upper:
-                return False # Ignora ruído
+            is_neutral = "AGUARDAR" in strat_upper or "NEUTRO" in strat_upper
+            
+            # Se for neutro MAS passou 4h, forçamos o log como Heartbeat
+            is_heartbeat = False
+            if is_neutral and elapsed_heartbeat >= 4.0:
+                is_heartbeat = True
+                strategy = "💓 HEARTBEAT"
+                self.last_heartbeat = now
+            elif is_neutral:
+                # Neutro comum: ignora
+                return False
 
             # Lógica de Resultado Visual
-            res_val = "⏳ (PENDING)"
+            res_val = "⏳ (PENDING)" if not is_heartbeat else "⚪ (STATUS)"
 
             new_row = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
                 "price": price,
                 "signal": signal,
                 "confidence": confidence,
@@ -52,6 +65,11 @@ class PredictionValidator:
             # Append atomicamente
             df = pd.DataFrame([new_row])
             df.to_csv(self.log_path, mode='a', header=False, index=False)
+            
+            if not is_heartbeat:
+                # Se foi um sinal real (não heartbeat), resetamos o timer do heartbeat também
+                self.last_heartbeat = now
+                
             return True
         except Exception as e:
             logger.error(f"❌ Falha ao registrar predição: {e}")
