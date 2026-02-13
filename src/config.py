@@ -117,7 +117,7 @@ class Settings(BaseSettings):
     # Tamanho do buffer em memória para dados de streaming antes de flush
     STREAM_BUFFER_SIZE_MB: int = 50
     # Data de início para o coletor histórico
-    HISTORICAL_START_DATE: str = "2023-01-01"
+    HISTORICAL_START_DATE: str = "2017-08-01"
 
     model_config = SettingsConfigDict(
         env_file=".env", 

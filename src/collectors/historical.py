@@ -107,6 +107,12 @@ async def download_and_process(
     data_type: str
 ):
     async with sem:
+        output_path = settings.RAW_HISTORICAL_DIR / f"{data_type}_{date_str}.parquet"
+        
+        if output_path.exists():
+            logger.info(f"Arquivo já existe, pulando: {output_path}")
+            return
+
         if data_type == "klines":
             filename = f"{settings.SYMBOL}-1m-{date_str}.zip"
             url = f"{BINANCE_DATA_URL}/klines/{settings.SYMBOL}/1m/{filename}"
