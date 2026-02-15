@@ -27,7 +27,7 @@ A comprehensive map of the QuantGod codebase.
 - `src/processing/normalization.py`: Z-Score and Log transforms.
 
 ### Models (`src/models/`)
-- `src/models/vivit.py`: **SAIMPViViT** Architecture (CNN + Transformer).
+- `src/models/vivit.py`: **QuantGodViViT** Architecture (CNN + Transformer).
 
 ### Training (`src/training/`)
 - `src/training/train.py`: Main training loop.

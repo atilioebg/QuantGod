@@ -10,8 +10,8 @@ import sys
 # Project imports
 from src.config import settings
 from src.processing.simulation import build_simulated_book
-from src.processing.tensor_builder import build_tensor_4d
-from src.processing.labeling import generate_labels
+from src.processing.tensor_builder import build_tensor_6d
+from src.processing.labeling import generate_hierarchical_labels
 
 class StreamingDataset(IterableDataset):
     """
@@ -105,9 +105,51 @@ class StreamingDataset(IterableDataset):
         # Por enquanto, assumimos num_workers=0 ou 1.
         
         for file_info in self.files_map:
-            # Carregar Lazy Frames
             month = file_info['month']
-            print(f"\n[STREAM] Carregando mês {month}...", flush=True)
+            processed_path = settings.PROCESSED_DIR / "tensors" / f"processed_{month}.npz"
+            
+            # --- CENÁRIO A: USAR DADOS PRÉ-PROCESSADOS (ULTRA FAST) ---
+            if processed_path.exists():
+                print(f"\n[STREAM] Carregando Tensores Pré-Processados: {month}...", flush=True)
+                try:
+                    data = np.load(processed_path)
+                    X_np = data['x']
+                    Y_np = data['y']
+                    # Timestamps vêm como string ou datetime opcional
+                    timestamps_raw = data['timestamps']
+                    
+                    # Converter timestamps para datetime para filtrar range
+                    # (Assume-se formato ISO ou similar salvo no precompute)
+                    times = [datetime.fromisoformat(t) if isinstance(t, str) else t for t in timestamps_raw]
+                    
+                    yield_count = 0
+                    if len(X_np) > self.seq_len:
+                        for i in range(len(X_np) - self.seq_len):
+                            target_idx = i + self.seq_len - 1
+                            target_time = times[target_idx]
+                            
+                            # Filtro de Data opcional (set_date_range)
+                            if (not self.start_date or target_time >= self.start_date) and \
+                               (not self.end_date or target_time < self.end_date):
+                                
+                                x_seq = X_np[i : i+self.seq_len]
+                                y_seq = Y_np[target_idx]
+                                
+                                yield (
+                                    torch.tensor(x_seq, dtype=torch.float32),
+                                    torch.tensor(y_seq, dtype=torch.long)
+                                )
+                                yield_count += 1
+                    
+                    print(f"      -> Yielded {yield_count} sequences (Cached) for {month}", flush=True)
+                    del X_np, Y_np, data
+                    gc.collect()
+                    continue # Próximo mês
+                except Exception as e:
+                    print(f"   [WARN] Falha ao carregar cache {month}: {e}. Tentando Processamento on-the-fly...")
+
+            # --- CENÁRIO B: PROCESSAMENTO ON-THE-FLY (FALLBACK) ---
+            print(f"\n[STREAM] Carregando mês {month} (On-the-fly)...", flush=True)
             
             try:
                 # 1. Identificar dias únicos no mês usando Scan (leve)

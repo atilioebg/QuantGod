@@ -1,6 +1,6 @@
 import pytest
 import torch
-from src.models.vivit import SAIMPViViT
+from src.models.vivit import QuantGodViViT
 
 def test_vivit_forward_pass():
     # Setup
@@ -10,7 +10,7 @@ def test_vivit_forward_pass():
     height = 128
     classes = 4   # Updated to 4
     
-    model = SAIMPViViT(
+    model = QuantGodViViT(
         seq_len=seq_len,
         input_channels=channels,
         price_levels=height,
@@ -29,7 +29,7 @@ def test_vivit_forward_pass():
 
 def test_vivit_sequence_length_warning():
     # Test if larger sequence than init raises error
-    model = SAIMPViViT(seq_len=5, input_channels=6, num_classes=4)
+    model = QuantGodViViT(seq_len=5, input_channels=6, num_classes=4)
     x = torch.randn(1, 10, 6, 128)
     
     with pytest.raises(ValueError):

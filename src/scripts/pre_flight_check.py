@@ -67,7 +67,7 @@ def check_imports():
         errors.append(f"Labeling: {e}")
     
     try:
-        from src.models.vivit import SAIMPViViT
+        from src.models.vivit import QuantGodViViT
         print(f"✅ Model (ViViT): Loaded")
     except Exception as e:
         errors.append(f"Model: {e}")
@@ -186,10 +186,10 @@ def check_model_instantiation():
     
     try:
         import torch
-        from src.models.vivit import SAIMPViViT
+        from src.models.vivit import QuantGodViViT
         
         print("\n🏗️ Instanciando modelo...")
-        model = SAIMPViViT(
+        model = QuantGodViViT(
             seq_len=96,
             input_channels=4,
             price_levels=128,
@@ -288,7 +288,7 @@ def main():
     """Run all checks"""
     print("\n")
     print("╔" + "=" * 78 + "╗")
-    print("║" + " " * 20 + "SAIMP PRE-FLIGHT CHECK" + " " * 36 + "║")
+    print("║" + " " * 20 + "QUANTGOD PRE-FLIGHT CHECK" + " " * 33 + "║")
     print("╚" + "=" * 78 + "╝")
     
     checks = [

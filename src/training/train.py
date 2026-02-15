@@ -1,5 +1,5 @@
 """
-SAIMP Training Script - Professional Edition
+QuantGod Training Script - Professional Edition
 Optimized for 32GB RAM + 2GB VRAM
 
 Techniques Implemented:
@@ -28,7 +28,7 @@ from src.config import settings
 from src.processing.simulation import build_simulated_book
 from src.processing.tensor_builder import build_tensor_6d
 from src.processing.labeling import generate_hierarchical_labels
-from src.models.vivit import SAIMPViViT
+from src.models.vivit import QuantGodViViT
 
 # ============================================================================
 # LOGGING INFRASTRUCTURE
@@ -204,7 +204,7 @@ def train():
     log_path = setup_training_logger()
     
     print("=" * 80)
-    print("SAIMP TRAINING - PROFESSIONAL EDITION (STREAMING)")
+    print("QUANTGOD TRAINING - PROFESSIONAL EDITION (STREAMING)")
     print("=" * 80)
     print(f"[LOG] Output saved to: {log_path}")
     print(f"[TIME] Start: {datetime.now()}")
@@ -272,7 +272,7 @@ def train():
     # STEP 2: Initialize Model
     # ========================================================================
     print("\n[INFO] Inicializando Modelo...")
-    model = SAIMPViViT(
+    model = QuantGodViViT(
         seq_len=settings.SEQ_LEN,
         input_channels=settings.INPUT_CHANNELS,
         price_levels=settings.PRICE_LEVELS,
@@ -297,10 +297,14 @@ def train():
         weight_decay=WEIGHT_DECAY
     )
     
+    # Implementing CosineAnnealing Scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
+    
     # Mixed Precision Scaler
     scaler = torch.cuda.amp.GradScaler() if torch.cuda.is_available() else None
     
     print(f"\n[INFO] Otimizador: AdamW (lr={LEARNING_RATE}, wd={WEIGHT_DECAY})")
+    print(f"   Scheduler: CosineAnnealingLR")
     print(f"   Loss: CrossEntropyLoss (weights={class_weights.tolist()})")
 
     # ========================================================================
@@ -308,10 +312,12 @@ def train():
     # ========================================================================
     best_val_acc = 0.0
     best_val_loss = float('inf')
-    save_path = settings.DATA_DIR / "saimp_best.pth"
+    save_path = settings.DATA_DIR / "quantgod_best_model.pth"
+    checkpoint_dir = settings.DATA_DIR / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
-    # Initialize Early Stopping
-    early_stopping = EarlyStopping(patience=3, min_delta=0.001)
+    # Initialize Early Stopping with configured patience
+    early_stopping = EarlyStopping(patience=settings.PATIENCE, min_delta=0.001)
     
     # Store metrics for plotting
     history = {
@@ -400,6 +406,9 @@ def train():
                 optimizer.step()
             optimizer.zero_grad()
         
+        # Step the scheduler
+        scheduler.step()
+        
         avg_train_loss = train_loss / batch_count if batch_count > 0 else 0
         train_acc = 100.0 * train_correct / train_total if train_total > 0 else 0
         
@@ -444,12 +453,22 @@ def train():
         print(f"\n[INFO] Epoch {epoch + 1} Summary:")
         print(f"   Train Loss: {avg_train_loss:.4f} | Train Acc: {train_acc:.2f}%")
         print(f"   Val Loss:   {avg_val_loss:.4f} | Val Acc:   {val_acc:.2f}%")
+        print(f"   LR:         {optimizer.param_groups[0]['lr']:.6f}")
         
+        # Periodic Checkpoints (Every 5 Epochs)
+        if (epoch + 1) % 5 == 0:
+            checkpoint_path = checkpoint_dir / f"quantgod_epoch_{epoch + 1:02d}.pth"
+            torch.save(model.state_dict(), checkpoint_path)
+            print(f"   [DR] Periodic Checkpoint saved: {checkpoint_path}")
+            
         # Early Stopping & Model Checkpoint Logic
         early_stopping(avg_val_loss, val_acc, model, save_path, epoch, EPOCHS)
         
         if early_stopping.early_stop:
             print("\n[STOP] Early Stopping triggered! Parando treino para evitar Overfitting.")
+            # Load the best model before ending
+            print(f"   [LOAD] Reverting system to the best model found: {save_path}")
+            model.load_state_dict(torch.load(save_path))
             break
         
         # Keep track of best accuracy separately just for reporting

@@ -63,7 +63,7 @@ def get_candles(df_trades, window="15m"):
     )
     return candles
 
-st.title("🎯 SAIMP: Cockpit Operacional")
+st.title("🎯 QuantGod: Cockpit Operacional")
 st.markdown("---")
 
 # 5. ZONA DE COMANDO (FRAGMENTO AO VIVO)

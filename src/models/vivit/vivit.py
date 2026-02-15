@@ -33,11 +33,11 @@ class SpatialFeatureExtractor(nn.Module):
         x = self.conv_layers(x)
         return x.squeeze(-1) # (Batch * Time, d_model)
 
-class SAIMPViViT(nn.Module):
+class QuantGodViViT(nn.Module):
     """
     Video Vision Transformer para Swing Trade.
     """
-    def __init__(self, seq_len=96, input_channels=6, price_levels=128, d_model=128, nhead=4, num_layers=2, num_classes=4):
+    def __init__(self, seq_len=96, input_channels=6, price_levels=128, d_model=128, nhead=4, num_layers=2, num_classes=4, dropout=0.1):
         super().__init__()
         
         self.d_model = d_model
@@ -49,14 +49,14 @@ class SAIMPViViT(nn.Module):
         self.pos_embedding = nn.Parameter(torch.randn(1, seq_len, d_model))
         
         # 3. Encoder Temporal (Transformer)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=512, batch_first=True)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=512, batch_first=True, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         
         # 4. Cabeça de Classificação
         self.classifier = nn.Sequential(
             nn.Linear(d_model, 64),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Dropout(dropout),
             nn.Linear(64, num_classes) # 4 Classes: 0(Neutral), 1(Stop), 2(Long), 3(Super Long)
         )
 

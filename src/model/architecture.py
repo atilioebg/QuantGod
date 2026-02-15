@@ -74,7 +74,7 @@ class Transformer(nn.Module):
         return x
 
 # --- A CLASSE PRINCIPAL (ALINHADA COM O PREDICTOR) ---
-class SAIMPViViT(nn.Module):
+class QuantGodViViT(nn.Module):
     def __init__(self, seq_len=32, input_channels=4, price_levels=128, num_classes=3, 
                  dim=128, depth=4, heads=4, mlp_dim=256, dropout=0.1, emb_dropout=0.1):
         super().__init__()

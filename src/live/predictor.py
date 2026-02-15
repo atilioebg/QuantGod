@@ -9,12 +9,12 @@ sys.path.append(str(Path.cwd()))
 from src.config import settings
 from src.processing.simulation import build_simulated_book
 from src.processing.tensor_builder import build_tensor_4d
-from src.models.vivit import SAIMPViViT
+from src.models.vivit import QuantGodViViT
 
 from datetime import datetime
 import pandas as pd
 
-logger = logging.getLogger("SAIMP.SniperBrain")
+logger = logging.getLogger("QuantGod.SniperBrain")
 
 class PredictionValidator:
     def __init__(self, log_path="data/prediction_log.csv"):
@@ -169,9 +169,9 @@ class PredictionValidator:
         return pd.DataFrame()
 
 class SniperBrain:
-    def __init__(self, model_path="data/saimp_best.pth"):
+    def __init__(self, model_path="data/quantgod_best_model.pth"):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = SAIMPViViT(seq_len=32, input_channels=4, price_levels=128, num_classes=3)
+        self.model = QuantGodViViT(seq_len=32, input_channels=4, price_levels=128, num_classes=3)
         
         if Path(model_path).exists():
             checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)

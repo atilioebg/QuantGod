@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from src.processing.tensor_builder import build_tensor_4d
 
-class SAIMPDataset(Dataset):
+class QuantGodDataset(Dataset):
     """
     Dataset PyTorch que carrega dados de Simulação (Parquet) e gera Tensores 4D on-the-fly via TensorBuilder.
     Sincroniza com Labels pré-calculados via Timestamp.
@@ -28,7 +28,7 @@ class SAIMPDataset(Dataset):
         # Unificar todos os "profile/simulated books" em um LazyFrame e Join com Labels
         # Isso cria o mapa final de (Snapshot -> Label).
         
-        print(f"SAIMPDataset: Indexando {len(tensor_files)} arquivos...")
+        print(f"QuantGodDataset: Indexando {len(tensor_files)} arquivos...")
         
         try:
              # Ler todos os arquivos de simulação (profiles)
@@ -57,7 +57,7 @@ class SAIMPDataset(Dataset):
             # partition_by("snapshot_time") cria uma lista de DataFrames pequenos.
             # Isso é perfeito para Dataset.
             
-            print("SAIMPDataset: Particionando Snapshots...")
+            print("QuantGodDataset: Particionando Snapshots...")
             self.snapshots = self.data.partition_by("snapshot_time", maintain_order=True)
             
             # Verificar integridade
@@ -68,7 +68,7 @@ class SAIMPDataset(Dataset):
                      valid_snapshots.append(snap)
             self.snapshots = valid_snapshots
             
-            print(f"SAIMPDataset: Pronta com {len(self.snapshots)} amostras.")
+            print(f"QuantGodDataset: Pronta com {len(self.snapshots)} amostras.")
             
         except Exception as e:
             print(f"Erro ao inicializar Dataset: {e}")

@@ -6,7 +6,7 @@ QuantGod uses a modified **Video Vision Transformer (ViViT)**, treating market d
 
 ---
 
-## 🏗️ Architecture Overview (`SAIMPViViT`)
+## 🏗️ Architecture Overview (`QuantGodViViT`)
 The model is composed of three main blocks:
 
 ### 1. Spatial Feature Extractor (The Eye)

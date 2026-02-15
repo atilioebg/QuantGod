@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from src.config import settings
 
-def setup_logger(name: str = "SAIMP", log_level: int = logging.INFO) -> logging.Logger:
+def setup_logger(name: str = "QuantGod", log_level: int = logging.INFO) -> logging.Logger:
     """
     Configures a logger with console and file handlers.
     
@@ -52,7 +52,7 @@ def log_memory_usage(logger=None):
     Logs current memory usage (RAM and VRAM).
     """
     if logger is None:
-        logger = logging.getLogger("SAIMP")
+        logger = logging.getLogger("QuantGod")
         
     try:
         import psutil

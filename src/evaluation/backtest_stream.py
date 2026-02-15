@@ -11,12 +11,12 @@ sys.path.append(str(Path.cwd()))
 from src.config import settings
 from src.processing.simulation import build_simulated_book
 from src.processing.tensor_builder import build_tensor_4d
-from src.models.vivit import SAIMPViViT
+from src.models.vivit import QuantGodViViT
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # --- CONFIGURAÇÃO DO SNIPER MODE ---
-MODEL_PATH = settings.DATA_DIR / "saimp_best.pth"
+MODEL_PATH = settings.DATA_DIR / "quantgod_best_model.pth"
 STREAM_MONTH = "2026-02"  # Mês de Teste (Futuro)
 SEQ_LEN = 32              # 4 Horas de Contexto (32 * 15m)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,8 +35,8 @@ def run_backtest():
         return
 
     # 1. Carregar o Modelo
-    print("🧠 Carregando Cérebro (SAIMPViViT)...")
-    model = SAIMPViViT(seq_len=SEQ_LEN, input_channels=4, price_levels=128, num_classes=3)
+    print("🧠 Carregando Cérebro (QuantGodViViT)...")
+    model = QuantGodViViT(seq_len=SEQ_LEN, input_channels=4, price_levels=128, num_classes=3)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE, weights_only=True))
     model.to(DEVICE)
     model.eval()

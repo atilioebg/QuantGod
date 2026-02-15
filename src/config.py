@@ -52,18 +52,20 @@ class Settings(BaseSettings):
     SEQ_LEN: int = 96
     
     # Tamanho do batch físico (Limitado pela VRAM da GPU)
-    # Ajustado para 3 conforme feedback de consumo.
-    BATCH_SIZE: int = 3
+    # Ajustado para 700 baseado no teste de estresse (Limite 889).
+    BATCH_SIZE: int = 700
     
     # Passos de acumulação de gradiente para simular batch maior.
-    # Batch Efetivo = 3 * 5 = 15 amostras por update de pesos.
-    ACCUMULATION_STEPS: int = 5
+    ACCUMULATION_STEPS: int = 1
     
     # Número de épocas de treinamento (passadas completas pelos dados)
-    EPOCHS: int = 15
+    EPOCHS: int = 100
     
-    # Taxa de aprendizado inicial do otimizador AdamW
-    LEARNING_RATE: float = 1e-4
+    # Paciência para Early Stopping
+    PATIENCE: int = 10
+    
+    # Taxa de aprendizado inicial
+    LEARNING_RATE: float = 3e-4
     
     # Regularização L2 para evitar overfitting
     WEIGHT_DECAY: float = 1e-5

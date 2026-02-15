@@ -68,7 +68,7 @@ def test_labeling():
         print(f"   Total: {df_labels.height:,}")
         
         # Contar distribuição
-        label_counts = df_labels.group_by("label").agg(pl.count()).sort("label")
+        label_counts = df_labels.group_by("label").agg(pl.len().alias("count")).sort("label")
         
         total = df_labels.height
         print(f"\n📊 Distribuição:")

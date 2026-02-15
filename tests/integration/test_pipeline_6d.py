@@ -19,11 +19,11 @@ from src.config import settings
 from src.processing.simulation import build_simulated_book
 from src.processing.tensor_builder import build_tensor_6d
 from src.processing.labeling import generate_hierarchical_labels
-from src.models.vivit import SAIMPViViT
+from src.models.vivit import QuantGodViViT
 
 def test_integration_6d():
     print("="*80)
-    print("🧪 SAIMP 6D INTEGRATION VERIFICATION (Pytest)")
+    print("🧪 QUANTGOD 6D INTEGRATION VERIFICATION (Pytest)")
     print("="*80)
     
     # 1. Mock Data Generation
@@ -108,7 +108,7 @@ def test_integration_6d():
     
     # 5. Model Inference
     print("\n[5] Testing Model Inference (ViViT)...")
-    model = SAIMPViViT(
+    model = QuantGodViViT(
         seq_len=96,
         input_channels=6,
         price_levels=128,
