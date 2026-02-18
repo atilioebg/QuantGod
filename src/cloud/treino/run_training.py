@@ -66,7 +66,7 @@ def run_training():
     
     # Selective loading of features only
     feature_cols = [
-        'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+        'body', 'upper_wick', 'lower_wick', 'log_ret_close',
         'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume'
     ]
     
@@ -77,13 +77,33 @@ def run_training():
     df = pl.concat(dfs)
     logger.info(f"Combined dataset shape: {df.shape}")
 
-    # 3. Prepare Tensors
+    # 3. Normalization (Institutional Standard: Fit on Train Only)
     X_raw = df.select(feature_cols).to_numpy().astype(np.float32)
     y_raw = df.select('target').to_numpy().flatten().astype(np.int64)
     
+    # Chronological Split for Scaler (80% Train)
+    split_idx = int(len(X_raw) * 0.8)
+    
+    from sklearn.preprocessing import StandardScaler
+    import pickle
+    
+    logger.info("Fitting Scaler on Training Split (First 80%) to avoid Look-ahead Bias...")
+    scaler = StandardScaler()
+    scaler.fit(X_raw[:split_idx])
+    
+    # Transform full dataset
+    X_norm = scaler.transform(X_raw)
+    
+    # Save Scaler for Inference
+    scaler_path = Path("data/models/scaler.pkl")
+    scaler_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(scaler_path, 'wb') as f:
+        pickle.dump(scaler, f)
+    logger.info(f"Scaler saved to {scaler_path}")
+
     seq_len = config['hyperparameters']['seq_len']
     logger.info(f"Creating sequences with seq_len={seq_len}...")
-    X_seq, y_seq = create_sequences(X_raw, y_raw, seq_len)
+    X_seq, y_seq = create_sequences(X_norm, y_raw, seq_len)
     
     # 4. Model Setup
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

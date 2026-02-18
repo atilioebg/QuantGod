@@ -147,17 +147,22 @@ class L2Transformer:
         # Cleanup
         final_df.dropna(inplace=True)
 
-        # Stationarity
+        # Stationarity & Candle Shape
         prev_close = final_df['close'].shift(1)
-        final_df['log_ret_open'] = np.log(final_df['open'] / prev_close)
-        final_df['log_ret_high'] = np.log(final_df['high'] / prev_close)
-        final_df['log_ret_low'] = np.log(final_df['low'] / prev_close)
+        
+        # Core Candle Shape Features (Institutional Standard)
+        # Body: Real movement within candle
+        final_df['body'] = np.log(final_df['close'] / final_df['open'])
+        # Wicks: Normalized by previous close to keep scale consistent
+        final_df['upper_wick'] = (final_df['high'] - np.maximum(final_df['open'], final_df['close'])) / prev_close
+        final_df['lower_wick'] = (np.minimum(final_df['open'], final_df['close']) - final_df['low']) / prev_close
+        
         final_df['log_ret_close'] = np.log(final_df['close'] / prev_close)
         final_df['log_volume'] = np.log1p(final_df['tick_count'])
 
-        # Final Feature List (The 9 core aggregated features)
+        # Final Feature List (Updated for ViViT / Transformer best practices)
         agg_features = [
-            'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+            'body', 'upper_wick', 'lower_wick', 'log_ret_close',
             'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume'
         ]
         

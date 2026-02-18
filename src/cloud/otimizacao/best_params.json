@@ -1,8 +1,8 @@
 {
     "d_model": 256,
-    "nhead": 8,
-    "num_layers": 4,
-    "lr": 4.960207884260574e-05,
-    "dropout": 0.26949764335198967,
-    "batch_size": 32
+    "nhead": 4,
+    "num_layers": 2,
+    "lr": 2.8061799857489217e-05,
+    "dropout": 0.23848900695713635,
+    "batch_size": 64
 }

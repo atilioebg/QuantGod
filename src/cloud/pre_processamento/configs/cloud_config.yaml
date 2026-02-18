@@ -13,4 +13,4 @@ etl:
 
 features:
   normalization: "log_returns" # log_returns, z-score, or both
-  apply_zscore: true
+  apply_zscore: false

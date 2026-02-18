@@ -46,7 +46,7 @@ def load_data(labelled_dir):
         raise FileNotFoundError(f"No labelled data found in {labelled_dir}")
     
     feature_cols = [
-        'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+        'body', 'upper_wick', 'lower_wick', 'log_ret_close',
         'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume'
     ]
     
@@ -160,11 +160,19 @@ def run_optimization():
     # 2. Data
     logger.info("Loading data for optimization...")
     df, feature_cols = load_data(config['paths']['labelled_dir'])
-    X_all = df.select(feature_cols).to_numpy().astype(np.float32)
+    X_raw = df.select(feature_cols).to_numpy().astype(np.float32)
     y_all = df.select('target').to_numpy().flatten().astype(np.int64)
-    logger.info(f"Data loaded: {X_all.shape}")
+    logger.info(f"Data loaded: {X_raw.shape}")
     
-    # 3. Study
+    # 3. Normalization (Fit on Train Only)
+    split_idx = int(len(X_raw) * 0.8)
+    from sklearn.preprocessing import StandardScaler
+    logger.info("Fitting Scaler on Training Split (First 80%) for Optimization...")
+    scaler = StandardScaler()
+    scaler.fit(X_raw[:split_idx])
+    X_all = scaler.transform(X_raw)
+
+    # 4. Study
     study = optuna.create_study(
         study_name=config['paths']['study_name'],
         storage=config['paths']['db_path'],
