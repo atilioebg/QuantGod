@@ -2,47 +2,64 @@
 
 Este diretório contém o pipeline modular de Processamento e Treinamento projetado para rodar em VMs de alta performance (RunPod/GCP/AWS).
 
-## 🚀 Módulos do Pipeline
+## 🚀 Guia de Execução Passo a Passo
 
-O pipeline é dividido em 4 etapas independentes, cada uma com sua própria configuração YAML:
+Siga esta ordem para reproduzir todo o ciclo de vida do modelo, desde os dados brutos até o modelo treinado.
 
-### 1. Pré-processamento (`cloud/pre_processamento`)
+### 1. Pré-processamento (ETL)
 Extrai dados brutos do Google Drive (via rclone), reconstrói o Orderbook (200 níveis), limpa e calcula features essenciais.
-- **Execução**: `python -m src.cloud.pre_processamento.orchestration.run_pipeline`
-- **Otimização**: Suporte a processamento paralelo multi-core.
+- **Comando**:
+  ```powershell
+  python -m src.cloud.pre_processamento.orchestration.run_pipeline
+  ```
+- **O que faz**: Lê ZIPs do Drive montado -> Gera Parquets em `data/L2/pre_processed`.
+- **Validação**: `pytest tests/test_cloud_etl_output.py`
 
-### 2. Rotulagem (`cloud/labelling`)
-Aplica a lógica econômica de alvos (Buy, Sell, Neutral) nos dados processados.
-- **Execução**: `python src/cloud/labelling/run_labelling.py`
-- **Ajuste**: Thresholds configuráveis via `labelling_config.yaml`.
+### 2. Rotulagem (Labelling)
+Aplica a lógica econômica de alvos (Buy, Sell, Neutral) nos dados processados usando thresholds assimétricos.
+- **Comando**:
+  ```powershell
+  python src/cloud/labelling/run_labelling.py
+  ```
+- **O que faz**: Lê `data/L2/pre_processed` -> Salva Parquets rotulados em `data/L2/labelled`.
+- **Validação**: `pytest tests/test_labelling_output.py`
 
-### 3. Otimização (`cloud/otimizacao`)
-Utiliza **Optuna** para encontrar os melhores hiperparâmetros do Transformer.
-- **Execução**: `python src/cloud/otimizacao/run_optuna.py`
-- **Output**: Salva `best_params.json` para uso no treino final.
+### 3. Otimização de Hiperparâmetros (Optuna)
+Utiliza o framework **Optuna** para encontrar a melhor arquitetura do Transformer, maximizando o F1-Score Ponderado.
+- **Comando**:
+  ```powershell
+  python src/cloud/otimizacao/run_optuna.py
+  ```
+- **Output**: Salva os melhores parâmetros em `src/cloud/otimizacao/best_params.json` e o estudo em `optuna_study.db`.
 
-### 4. Treinamento (`cloud/treino`)
-Treino final do modelo `QuantGodModel` usando os melhores parâmetros.
-- **Execução**: `python src/cloud/treino/run_training.py`
-- **Output**: Modelo treinado `.pt`.
+#### 📊 Monitoramento em Tempo Real (Optuna Dashboard)
+Você pode acompanhar a evolução da otimização, gráficos de importância de parâmetros e curvas de aprendizado via dashboard web.
+1. Em um novo terminal, execute:
+   ```powershell
+   optuna-dashboard sqlite:///optuna_study.db
+   ```
+2. Abra o navegador em: `http://127.0.0.1:8080/`
+
+### 4. Treinamento Final (Fine-Tuning)
+Treina o modelo `QuantGodModel` final utilizando os melhores hiperparâmetros encontrados na etapa anterior.
+- **Comando**:
+  ```powershell
+  python src/cloud/treino/run_training.py
+  ```
+- **Output**: Salva o modelo treinado em `data/models/quantgod_cloud_model.pth`.
 
 ---
 
-## 🧪 Validação e Testes
-
-Para garantir que a migração não corrompa os dados, use:
-```powershell
-pytest tests/test_cloud_etl_output.py
-```
-
-Para inspeção visual das labels:
-```powershell
-python tests/visualize_labels.py
-```
+## 📂 Logs e Monitoramento
+Todo o processo gera logs detalhados para auditoria em `logs/`:
+- `logs/etl/`: Progresso do processamento de arquivos.
+- `logs/labelling/`: Distribuição de classes (Buy/Sell/Neutral) por arquivo.
+- `logs/optimization/`: Métricas de cada trial (Loss, F1, Acurácia).
+- `logs/training/`: Evolução de Loss e F1 por época.
 
 ---
 
 ## 🛠️ Requisitos
 - Python 3.10+
-- Polars, PyTorch, Optuna, PyYAML, Pandas, tqdm
-- Rclone configurado para o Google Drive
+- Dependências: `pip install -r requirements.txt`
+- Rclone configurado e montado (G: ou Z:) para acesso aos dados brutos.
