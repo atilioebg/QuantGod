@@ -9,14 +9,14 @@ echo "------------------------------------------------------------"
 sudo apt update && sudo apt install -y rclone python3-pip python3-venv
 
 # 2. Create Virtual Environment
-if [ ! -d "venv_cloud" ]; then
-    echo "[INFO] Creating virtual environment 'venv_cloud'..."
-    python3 -m venv venv_cloud
+if [ ! -d ".venv" ]; then
+    echo "[INFO] Creating virtual environment '.venv'..."
+    python3 -m venv .venv
 fi
 
 # 3. Install Python requirements
 echo "[INFO] Installing Python dependencies..."
-source venv_cloud/bin/activate
+source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements_cloud.txt
 
@@ -36,6 +36,6 @@ fi
 
 echo "------------------------------------------------------------"
 echo "✅ Setup complete. To start the pipeline:"
-echo "1. Activate venv: source venv_cloud/bin/activate"
+echo "1. Activate venv: source .venv/bin/activate"
 echo "2. Run pipeline: python -m cloud.orchestration.run_pipeline"
 echo "------------------------------------------------------------"

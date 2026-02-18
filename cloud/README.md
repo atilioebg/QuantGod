@@ -15,7 +15,7 @@ chmod +x setup_cloud.sh
 
 **O que ele faz:**
 - Instala `rclone`, `pip` e `venv`.
-- Cria o ambiente virtual `venv_cloud`.
+- Cria o ambiente virtual `.venv`.
 - Instala as dependências de `requirements_cloud.txt`.
 - Cria as pastas `data/processed`, `data/models` e `logs` na raiz do projeto.
 
@@ -44,7 +44,7 @@ Toda a lógica do pipeline é controlada por este arquivo.
 Após configurar o `.yaml` e rodar o `.sh`:
 
 ```bash
-source venv_cloud/bin/activate
+source .venv/bin/activate
 python -m cloud.orchestration.run_pipeline
 ```
 
