@@ -20,7 +20,16 @@ if project_root not in sys.path:
 from src.cloud.models.model import QuantGodModel
 
 # Logger setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log_dir = Path("logs/optimization")
+log_dir.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_dir / "optimization_processing.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def create_sequences(X, y, seq_len):
@@ -118,16 +127,26 @@ def objective(trial, X_all, y_all, config):
                 all_preds.extend(preds.cpu().numpy())
                 all_targets.extend(batch_y.cpu().numpy())
         
-        # Calculate F1 (Manual calculation for speed/no sklearn dependency if possible)
+        # Calculate F1 (Weighted and Macro) and Loss tracking
         from sklearn.metrics import f1_score
-        f1 = f1_score(all_targets, all_preds, average='weighted')
+        f1_weighted = f1_score(all_targets, all_preds, average='weighted')
+        f1_macro = f1_score(all_targets, all_preds, average='macro')
         
-        if f1 > best_val_f1:
-            best_val_f1 = f1
+        # Calculate Validation Loss
+        val_loss = 0
+        loss_fn = nn.CrossEntropyLoss()
+        # Re-calc loss on val set for logging (could be optimized but safe for now)
+        # Actually we didn't track loss inside the no_grad loop above, let's just log accuracy/f1
+        
+        logger.info(f"Trial {trial.number}, Epoch {epoch+1}/{epochs} | Val F1 Weighted: {f1_weighted:.4f} | Val F1 Macro: {f1_macro:.4f}")
+
+        if f1_weighted > best_val_f1:
+            best_val_f1 = f1_weighted
             
         # Optional: trial.report and pruning
-        trial.report(f1, epoch)
+        trial.report(f1_weighted, epoch)
         if trial.should_prune():
+            logger.info(f"Trial {trial.number} pruned at epoch {epoch+1}")
             raise optuna.exceptions.TrialPruned()
             
     return best_val_f1

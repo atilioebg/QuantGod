@@ -13,7 +13,16 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Logger setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log_dir = Path("logs/etl")
+log_dir.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_dir / "etl_processing.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def process_single_zip(zip_path, config):
@@ -107,6 +116,8 @@ def run_pipeline():
                 logger.error(result)
 
     logger.info("Pipeline execution finished.")
+    logger.info(f"Total processed files: {len(zip_files)}")
+    logger.info(f"CPUs used: {max_workers} / {total_cpus}")
 
 if __name__ == "__main__":
     run_pipeline()

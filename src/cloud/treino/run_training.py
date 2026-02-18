@@ -18,8 +18,19 @@ if project_root not in sys.path:
 from src.cloud.models.model import QuantGodModel
 
 # Logger setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log_dir = Path("logs/training")
+log_dir.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_dir / "training_processing.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
+
+from sklearn.metrics import f1_score
 
 def create_sequences(X, y, seq_len):
     """Cria sequencias 3D (Batch, Time, Features)"""
@@ -111,8 +122,25 @@ def run_training():
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-            
-        logger.info(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss/len(train_loader):.4f}")
+        
+        # Calculate Epoch Metrics
+        model.eval()
+        epoch_preds = []
+        epoch_targets = []
+        with torch.no_grad():
+            for batch_X, batch_y in train_loader: # Ideally use a val_loader here but for this POC using train set for metrics check
+                batch_X, batch_y = batch_X.to(DEVICE), batch_y.to(DEVICE)
+                outputs = model(batch_X)
+                preds = torch.argmax(outputs, dim=1)
+                epoch_preds.extend(preds.cpu().numpy())
+                epoch_targets.extend(batch_y.cpu().numpy())
+        
+        avg_loss = total_loss/len(train_loader)
+        f1_weighted = f1_score(epoch_targets, epoch_preds, average='weighted')
+        f1_macro = f1_score(epoch_targets, epoch_preds, average='macro')
+        
+        logger.info(f"Epoch [{epoch+1}/{epochs}] | Loss: {avg_loss:.4f} | F1 Weighted: {f1_weighted:.4f} | F1 Macro: {f1_macro:.4f}")
+        model.train()
 
     # 6. Save Model
     output_path = Path(config['paths']['model_output'])

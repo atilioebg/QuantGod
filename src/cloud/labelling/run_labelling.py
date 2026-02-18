@@ -8,7 +8,16 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Logger setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log_dir = Path("logs/labelling")
+log_dir.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_dir / "labelling_processing.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def apply_labelling(file_path, config):
@@ -53,10 +62,24 @@ def apply_labelling(file_path, config):
         output_path = output_dir / file_path.name
         df_final.write_parquet(output_path)
         
-        return f"✅ Labelled {file_path.name}"
+        return {
+            "status": "success",
+            "file": file_path.name,
+            # Converter para dict simples {class: count}
+            # value_counts retorna struct com colunas "target" e "count"
+            # Precisamos iterar
+            "counts": {
+                row['target']: row['count'] 
+                for row in df_final['target'].value_counts().to_dicts()
+            }
+        }
         
     except Exception as e:
-        return f"❌ Error labelling {file_path.name}: {str(e)}"
+        return {
+            "status": "error",
+            "file": file_path.name,
+            "error": str(e)
+        }
 
 def run_labelling():
     # 1. Load Config
@@ -88,15 +111,29 @@ def run_labelling():
     logger.info(f"Found {len(parquet_files)} files to label.")
 
     # 3. Parallel Execution
+    label_counts_total = {}
+
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         future_to_file = {executor.submit(apply_labelling, pf, config): pf for pf in parquet_files}
         
         for future in tqdm(as_completed(future_to_file), total=len(parquet_files), desc="Labelling Progress"):
             result = future.result()
-            if "❌" in result:
-                logger.error(result)
+            
+            if result['status'] == 'error':
+                 logger.error(f"❌ Error labelling {result['file']}: {result['error']}")
+            else:
+                 # Aggregate counts
+                 for label_class, count in result['counts'].items():
+                     label_counts_total[label_class] = label_counts_total.get(label_class, 0) + count
 
     logger.info("Labelling phase finished.")
+    logger.info("Final Label Distribution:")
+    for label_class, count in sorted(label_counts_total.items()):
+        label_name = {0: "SELL", 1: "NEUTRAL", 2: "BUY"}.get(label_class, f"Class {label_class}")
+        logger.info(f"   {label_name} ({label_class}): {count:,} samples")
+
+    logger.info(f"Total processed files: {len(parquet_files)}")
+    logger.info(f"CPUs used: {max_workers} / {total_cpus}")
 
 if __name__ == "__main__":
     run_labelling()
