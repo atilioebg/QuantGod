@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 
 # Configurações
-INPUT_FILE = Path("data/L2/interim/l2_merged_raw.parquet")
+INPUT_FILE = Path("data/L2/pre_processed/l2_merged_raw.parquet")
 OUTPUT_FILE = Path("data/processed/l2_features_1min_final.parquet")
 
 def process_bybit_features():

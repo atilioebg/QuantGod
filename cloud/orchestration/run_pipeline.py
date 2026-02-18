@@ -12,9 +12,15 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+import sys
+
 def run_pipeline():
     # 1. Load Config
-    config_path = Path("cloud/configs/cloud_config.yaml")
+    if len(sys.argv) > 1:
+        config_path = Path(sys.argv[1])
+    else:
+        config_path = Path("cloud/configs/cloud_config.yaml")
+
     if not config_path.exists():
         logger.error(f"Config file not found at {config_path}")
         return

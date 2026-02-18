@@ -10,7 +10,7 @@ import os
 
 # Configurações
 RAW_DIR = Path("data/L2/raw/l2_samples")
-INTERIM_DIR = Path("data/L2/interim")
+INTERIM_DIR = Path("data/L2/pre_processed")
 OUTPUT_FILE = INTERIM_DIR / "l2_merged_raw.parquet"
 SAMPLING_INTERVAL_MS = 1000 # 1 Segundo
 
