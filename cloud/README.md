@@ -77,3 +77,22 @@ O pipeline depende de:
 *   `scikit-learn`: Para aplicação do `StandardScaler` (Z-Score).
 *   `tqdm`: Barras de progresso para monitoramento de grandes volumes.
 *   `pyyaml`: Leitura dos arquivos de configuração.
+*   `pytest`: Execução da suíte de testes de integridade.
+
+---
+
+## 🧪 Validação e Testes
+
+Para garantir que a migração para a nuvem não corrompa a integridade dos dados, implementamos uma suíte de testes automáticos que valida a estrutura dos arquivos Parquet gerados.
+
+### O que é validado:
+- **Shape e Colunas**: Verifica se o arquivo contém as 810 colunas (Opção B - 200 níveis).
+- **Ordenação do Book**: Garante que Bids estão em ordem decrescente e Asks em crescente.
+- **Spread Positivo**: Valida que o melhor Bid é sempre menor que o melhor Ask (sem book cruzado).
+- **Qualidade das Features**: Certifica-se de que não existem NaNs ou Infs nas 9 features de treinamento.
+- **Continuidade Temporal**: Verifica se os dados estão em ordem cronológica e sem gaps inesperados.
+
+### Como rodar os testes:
+```bash
+pytest tests/test_cloud_etl_output.py
+```
