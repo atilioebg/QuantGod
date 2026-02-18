@@ -1,65 +1,125 @@
 # QuantGod Cloud Infrastructure ☁️
 
-Este diretório contém o pipeline modular de Processamento e Treinamento projetado para rodar em VMs de alta performance (RunPod/GCP/AWS).
+Este diretório contém o pipeline modular de Processamento e Treinamento do QuantGod, projetado para escalar horizontalmente em instâncias de nuvem (RunPod, GCP, AWS) ou rodar localmente para desenvolvimento.
 
-## 🚀 Guia de Execução Passo a Passo
+---
 
-Siga esta ordem para reproduzir todo o ciclo de vida do modelo, desde os dados brutos até o modelo treinado.
+## 🛠️ Configuração do Ambiente
 
-### 1. Pré-processamento (ETL)
-Extrai dados brutos do Google Drive (via rclone), reconstrói o Orderbook (200 níveis), limpa e calcula features essenciais.
+Antes de iniciar, certifique-se de satisfazer as dependências.
+
+### 1. Instalação de Bibliotecas
+Na raiz do projeto:
+```powershell
+pip install -r requirements.txt
+```
+
+### 2. Conexão com Dados (Rclone) 🔌
+O pipeline **não baixa** os terabytes de dados para o disco local. Ele usa **streaming** via mount de disco. Você precisa "montar" o Google Drive do projeto.
+
+#### **Opção A: Windows (Local / Dev)**
+Use o executável `rclone.exe` já incluído na raiz do projeto.
+1. Abra um terminal **PowerShell como Administrador**.
+2. Execute o comando para montar o drive na letra `Z:`:
+   ```powershell
+   .\rclone.exe mount drive: Z: --vfs-cache-mode full --config rclone.conf
+   ```
+   *⚠️ Mantenha esta janela do terminal aberta enquanto estiver trabalhando.*
+
+#### **Opção B: Linux (Cloud / RunPod)**
+Em instâncias Linux, montamos em `/workspace/gdrive`.
+```bash
+# Insta-le o rclone se necessário
+curl https://rclone.org/install.sh | sudo bash
+
+# Configure (se ainda não tiver o rclone.conf)
+rclone config
+
+# Crie a pasta e monte em background
+mkdir -p /workspace/gdrive
+rclone mount drive: /workspace/gdrive --vfs-cache-mode full --allow-other &
+```
+
+---
+
+## 🚀 Pipeline de Execução Passo a Passo
+
+Siga esta ordem rigorosa para reproduzir o ciclo de vida do modelo.
+
+### 1. Pré-processamento (ETL) 🧹
+Transforma os arquivos brutos ZIP (Bybit L2) em arquivos Parquet otimizados e limpos.
+- **Configuração**: `src/cloud/pre_processamento/configs/cloud_config.yaml`
+- **Output**: `data/L2/pre_processed/*.parquet`
 - **Comando**:
   ```powershell
   python -m src.cloud.pre_processamento.orchestration.run_pipeline
   ```
-- **O que faz**: Lê ZIPs do Drive montado -> Gera Parquets em `data/L2/pre_processed`.
-- **Validação**: `pytest tests/test_cloud_etl_output.py`
+- **Validação**: Verifique a integridade dos dados gerados:
+  ```powershell
+  pytest tests/test_cloud_etl_output.py
+  ```
 
-### 2. Rotulagem (Labelling)
-Aplica a lógica econômica de alvos (Buy, Sell, Neutral) nos dados processados usando thresholds assimétricos.
+### 2. Rotulagem (Labelling) 🏷️
+Aplica a lógica econômica (Thresholds Assimétricos) para criar os alvos (`target`): 0 (Sell), 1 (Neutral), 2 (Buy).
+- **Configuração**: `src/cloud/labelling/labelling_config.yaml`
+- **Output**: `data/L2/labelled/*.parquet`
 - **Comando**:
   ```powershell
   python src/cloud/labelling/run_labelling.py
   ```
-- **O que faz**: Lê `data/L2/pre_processed` -> Salva Parquets rotulados em `data/L2/labelled`.
-- **Validação**: `pytest tests/test_labelling_output.py`
+- **Validação**: Verifica se as classes não estão zeradas:
+  ```powershell
+  pytest tests/test_labelling_output.py
+  ```
 
-### 3. Otimização de Hiperparâmetros (Optuna)
-Utiliza o framework **Optuna** para encontrar a melhor arquitetura do Transformer, maximizando o F1-Score Ponderado.
+### 3. Otimização de Hiperparâmetros (Optuna) 🎯
+Utiliza busca Bayesiana para encontrar a melhor arquitetura do Transformer (n_heads, layers, dropout, lr), maximizando o **F1-Score Ponderado**.
+- **Configuração**: `src/cloud/otimizacao/optimization_config.yaml`
 - **Comando**:
   ```powershell
   python src/cloud/otimizacao/run_optuna.py
   ```
-- **Output**: Salva os melhores parâmetros em `src/cloud/otimizacao/best_params.json` e o estudo em `optuna_study.db`.
+- **Output**: 
+  - `src/cloud/otimizacao/best_params.json` (Melhores configs).
+  - `optuna_study.db` (Histórico da otimização).
 
-#### 📊 Monitoramento em Tempo Real (Optuna Dashboard)
-Você pode acompanhar a evolução da otimização, gráficos de importância de parâmetros e curvas de aprendizado via dashboard web.
-1. Em um novo terminal, execute:
-   ```powershell
-   optuna-dashboard sqlite:///optuna_study.db
-   ```
-2. Abra o navegador em: `http://127.0.0.1:8080/`
+#### 📊 Dashboard em Tempo Real
+Para visualizar gráficos de convergência e importância de parâmetros:
+```powershell
+optuna-dashboard sqlite:///optuna_study.db
+# Acesse no navegador: http://127.0.0.1:8080/
+```
 
-### 4. Treinamento Final (Fine-Tuning)
-Treina o modelo `QuantGodModel` final utilizando os melhores hiperparâmetros encontrados na etapa anterior.
+### 4. Treinamento Final (Fine-Tuning) 🧠
+Treina o modelo `QuantGodModel` definitivo usando os melhores parâmetros encontrados pelo Optuna.
+- **Configuração**: `src/cloud/treino/training_config.yaml`
+- **Input**: Lê automaticamente `best_params.json` se disponível (ou usa o config padrão).
 - **Comando**:
   ```powershell
   python src/cloud/treino/run_training.py
   ```
-- **Output**: Salva o modelo treinado em `data/models/quantgod_cloud_model.pth`.
+- **Output**: `data/models/quantgod_cloud_model.pth`
 
 ---
 
-## 📂 Logs e Monitoramento
-Todo o processo gera logs detalhados para auditoria em `logs/`:
-- `logs/etl/`: Progresso do processamento de arquivos.
-- `logs/labelling/`: Distribuição de classes (Buy/Sell/Neutral) por arquivo.
-- `logs/optimization/`: Métricas de cada trial (Loss, F1, Acurácia).
-- `logs/training/`: Evolução de Loss e F1 por época.
+## 📂 Logs e Auditoria
+O sistema mantem logs detalhados para debugging e auditoria de performance.
+
+| Pasta | Conteúdo | Importância |
+| :--- | :--- | :--- |
+| `logs/etl/` | Arquivos processados, erros de leitura, uso de CPU. | Alta (Integridade) |
+| `logs/labelling/` | Contagem de classes (Buy/Sell), arquivos vazios. | Alta (Balanceamento) |
+| `logs/optimization/` | Loss, F1 e Acurácia de cada trial do Optuna. | Média (Performance) |
+| `logs/training/` | Evolução da Loss e F1 por época do treino final. | Alta (Convergência) |
 
 ---
 
-## 🛠️ Requisitos
-- Python 3.10+
-- Dependências: `pip install -r requirements.txt`
-- Rclone configurado e montado (G: ou Z:) para acesso aos dados brutos.
+## 🆘 Troubleshooting
+
+**Erro: `path not found` ou `Z:\...` inexistente**
+- Verifique se o Rclone está rodando (Passo 2).
+- Se estiver no Linux, verifique se o caminho no `cloud_config.yaml` aponta para `/workspace/gdrive/...`.
+
+**Erro: `Out of Memory (OOM)`**
+- Reduza o `batch_size` nos arquivos de configuração `.yaml`.
+- No ETL, reduza o número de workers em `run_pipeline.py`.
