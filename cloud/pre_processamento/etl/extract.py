@@ -26,7 +26,8 @@ class DataExtractor:
         try:
             with zipfile.ZipFile(zip_path, 'r') as z:
                 for name in z.namelist():
-                    if name.endswith('.json') or name.endswith('.csv'):
+                    # Accept .json, .csv or .data files
+                    if any(name.endswith(ext) for ext in ['.json', '.csv', '.data']):
                         logger.info(f"Streaming {name} from {zip_path.name}")
                         with z.open(name) as f:
                             yield name, f

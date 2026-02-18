@@ -1,0 +1,10 @@
+# Labelling Configuration
+paths:
+  input_dir: "data/L2/pre_processed"
+  output_dir: "data/L2/labelled"
+
+params:
+  lookahead: 60           # 1h lookahead for 1min candles
+  threshold_long: 0.008   # +0.8% for Buy signal (2)
+  threshold_short: -0.004 # -0.4% for Sell signal (0)
+  # Neutrals (1) are otherwise
