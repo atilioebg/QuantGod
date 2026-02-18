@@ -30,10 +30,11 @@ def apply_labelling(file_path, config):
         df = pl.read_parquet(file_path)
         
         # 2. Calculate Future Returns
-        # Note: log_ret_close.shift(-lookahead).rolling_sum(lookahead)
-        # This gives the log return over the next 'lookahead' steps
+        # We want the cumulative log return from t+1 up to t+lookahead.
+        # rolling_sum(60) at index t+60 gives sum(t+1...t+60).
+        # shifting that back to index t gives exactly the future 60-min return.
         df = df.with_columns([
-            pl.col("log_ret_close").shift(-lookahead).rolling_sum(window_size=lookahead).alias("future_return")
+            pl.col("log_ret_close").rolling_sum(window_size=lookahead).shift(-lookahead).alias("future_return")
         ])
         
         # 3. Apply Thresholds
