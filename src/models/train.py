@@ -28,7 +28,16 @@ def train():
         return
 
     print(f"INFO: Carregando dados de {settings.DATA_PATH}...")
-    df = pl.read_parquet(settings.DATA_PATH)
+    
+    # Lista de colunas necessárias: 9 features + close (para labelling)
+    necessary_cols = [
+        'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+        'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume',
+        'close'
+    ]
+    
+    # Carregamento Otimizado: Lemos apenas o que vamos usar
+    df = pl.read_parquet(settings.DATA_PATH, columns=necessary_cols)
     
     # Parametros da Estrategia
     lookahead = 60 # 1h
@@ -52,10 +61,17 @@ def train():
     df = df.slice(settings.SEQ_LEN, len(df) - settings.SEQ_LEN - lookahead)
     
     # Separar Features e Target
-    drop_cols = ['target', 'future_return_60m', 'datetime', 'close']
-    feature_cols = [c for c in df.columns if c not in drop_cols]
+    # Definimos explicitamente as 9 features agregadas para ignorar os 200 níveis brutos
+    feature_cols = [
+        'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+        'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume'
+    ]
     
-    print(f"INFO: Usando {len(feature_cols)} features.")
+    # Verificar se todas as features existem no arquivo
+    available_cols = df.columns
+    feature_cols = [c for c in feature_cols if c in available_cols]
+    
+    print(f"INFO: Usando {len(feature_cols)} features agregadas (ignorando colunas raw de 200 níveis).")
     
     X_raw = df.select(feature_cols).to_numpy().astype(np.float32)
     y_raw = df.select('target').to_numpy().flatten().astype(np.int64)

@@ -58,8 +58,12 @@ class L2Transformer:
         """Captures the top N levels (Hard Cut) and basic features."""
         # Top 200 Bids (Desc)
         sorted_bids = sorted(self.bids_book.keys(), reverse=True)[:self.levels]
-        # Top 200 Asks (Asc)
         sorted_asks = sorted(self.asks_book.keys())[:self.levels]
+
+        # Cross-validation: Ensure no crosses
+        if sorted_bids and sorted_asks:
+            if sorted_bids[0] >= sorted_asks[0]:
+                logger.warning(f"Orderbook crossed at {ts}: Bid {sorted_bids[0]} >= Ask {sorted_asks[0]}")
 
         row = {"ts": ts}
         
@@ -78,7 +82,12 @@ class L2Transformer:
             row['spread'] = np.nan
             row['obi_l0'] = 0.0
 
-        # Hard Cut 200 levels
+        # Deep Imbalance (Levels 0-4)
+        bid_vol_5 = sum(self.bids_book.get(p, 0.0) for p in sorted_bids[:5])
+        ask_vol_5 = sum(self.asks_book.get(p, 0.0) for p in sorted_asks[:5])
+        row['deep_obi_5'] = (bid_vol_5 - ask_vol_5) / (bid_vol_5 + ask_vol_5) if (bid_vol_5 + ask_vol_5) > 0 else 0.0
+
+        # Hard Cut 200 levels (Full orderbook state if needed, but we mainly use aggregates)
         for i in range(self.levels):
             if i < len(sorted_bids):
                 p = sorted_bids[i]
@@ -106,20 +115,34 @@ class L2Transformer:
         df.set_index('datetime', inplace=True)
         
         # Resampling 1min
-        # Note: We keep only micro_price for OHLC and other aggregates as per legacy
-        resampled_ohlc = df['micro_price'].resample('1min').ohlc()
-        resampled_others = df.resample('1min').agg({
+        # Note: We keep micro_price for OHLC and other aggregates
+        # Prepare aggregation for all levels
+        agg_map = {
             'micro_price': 'std',
             'spread': 'max',
-            'obi_l0': 'mean'
-        })
+            'obi_l0': 'mean',
+            'deep_obi_5': 'mean'
+        }
+        # Include all bid/ask levels in the aggregation (using 'last' to represent best state at EOM)
+        ob_cols_raw = [c for c in df.columns if 'bid_' in c or 'ask_' in c]
+        for col in ob_cols_raw:
+            agg_map[col] = 'last'
+
+        resampled_others = df.resample('1min').agg(agg_map)
         
         # For Log Volume, we use tick count in the interval
         df['tick_count'] = 1
         resampled_vol = df['tick_count'].resample('1min').sum()
 
+        resampled_ohlc = df['micro_price'].resample('1min').ohlc()
         final_df = pd.concat([resampled_ohlc, resampled_others, resampled_vol], axis=1)
-        final_df.columns = ['open', 'high', 'low', 'close', 'volatility', 'max_spread', 'mean_obi', 'tick_count']
+        # Match legacy names for aggregated features
+        agg_col_names = ['open', 'high', 'low', 'close', 'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi']
+        # Ensure all columns are present before renaming
+        expected_agg = ['open', 'high', 'low', 'close', 'volatility', 'max_spread', 'obi_l0', 'deep_obi_5']
+        
+        # Select existing columns carefully
+        final_df.columns = agg_col_names + ob_cols_raw + ['tick_count']
         
         # Cleanup
         final_df.dropna(inplace=True)
@@ -132,11 +155,24 @@ class L2Transformer:
         final_df['log_ret_close'] = np.log(final_df['close'] / prev_close)
         final_df['log_volume'] = np.log1p(final_df['tick_count'])
 
+        # Final Feature List (The 9 core aggregated features)
+        agg_features = [
+            'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+            'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume'
+        ]
+        
+        # Keep aggregated features, the target base 'close', AND all raw orderbook levels (bid_X_p, bid_X_s, etc.)
+        ob_cols = [c for c in final_df.columns if any(x in c for x in ['bid_', 'ask_'])]
+        final_cols = agg_features + ['close'] + ob_cols
+        
+        # Ensure we only keep what exists and drop raw OHLCTick intermediate columns
+        final_df = final_df[final_cols]
+        
         return final_df.dropna()
 
     def apply_zscore(self, df: pd.DataFrame, scaler_path: Optional[str] = None) -> pd.DataFrame:
         """Applies Z-Score normalization and saves/loads scaler."""
-        cols_to_norm = ['volatility', 'max_spread', 'mean_obi', 'log_volume', 
+        cols_to_norm = ['volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume', 
                         'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close']
         
         if df.empty: return df
