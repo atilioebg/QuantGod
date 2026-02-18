@@ -17,7 +17,7 @@ chmod +x setup_cloud.sh
 - Instala `rclone`, `pip` e `venv`.
 - Cria o ambiente virtual `.venv`.
 - Instala as dependências de `requirements.txt`.
-- Cria as pastas `data/processed`, `data/models` e `logs` na raiz do projeto.
+- Cria as pastas `data/L2/pre_processed`, `data/L2/labelled`, `data/artifacts` e `logs` na raiz do projeto.
 
 ---
 
@@ -26,8 +26,8 @@ Toda a lógica do pipeline é controlada por este arquivo.
 
 #### Parâmetros de Caminho (`paths`)
 - `rclone_mount`: Onde o Google Drive está montado via rclone. Padrão: `/workspace/gdrive/My Drive/...`.
-- `processed_output`: Onde os arquivos `.parquet` finais serão salvos.
-- `scaler_path`: Local para salvar/carregar o `scaler.pkl` (Z-Score).
+- `processed_output`: Onde os arquivos `.parquet` finais serão salvos (Ex: `data/L2/pre_processed`).
+- `scaler_path`: Local para salvar/carregar o `scaler.pkl` (Ex: `data/artifacts/scaler.pkl`).
 
 #### Parâmetros de ETL (`etl`)
 - `sampling_interval_ms`: Frequência de amostragem dos ticks (Ex: `1000` para 1 segundo).

@@ -1,8 +1,8 @@
 # Cloud Configuration for QuantGod
 paths:
   rclone_mount: "/workspace/gdrive/My Drive/QuantGod/L2/raw"
-  processed_output: "/workspace/data/processed"
-  scaler_path: "/workspace/data/models/scaler.pkl"
+  processed_output: "/workspace/data/L2/pre_processed"
+  scaler_path: "/workspace/data/artifacts/scaler.pkl"
 
 etl:
   sampling_interval_ms: 1000  # 1s

@@ -22,8 +22,10 @@ pip install -r requirements.txt
 
 # 4. Create directory structure
 echo "[INFO] Creating data directories..."
-mkdir -p data/processed
-mkdir -p data/models
+mkdir -p data/L2/raw
+mkdir -p data/L2/pre_processed
+mkdir -p data/L2/labelled
+mkdir -p data/artifacts
 mkdir -p logs
 
 # 5. Check Rclone configuration
