@@ -25,7 +25,7 @@ class TestCloudDataIntegrity:
         """Valida se as 9 features de treinamento e a coluna close existem."""
         df = pd.read_parquet(file_path)
         essential_cols = [
-            'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+            'body', 'upper_wick', 'lower_wick', 'log_ret_close',
             'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume',
             'close'
         ]
@@ -60,13 +60,17 @@ class TestCloudDataIntegrity:
         """Garante que as 9 features de treino não possuem NaNs."""
         df = pd.read_parquet(file_path)
         feature_cols = [
-            'log_ret_open', 'log_ret_high', 'log_ret_low', 'log_ret_close',
+            'body', 'upper_wick', 'lower_wick', 'log_ret_close',
             'volatility', 'max_spread', 'mean_obi', 'mean_deep_obi', 'log_volume'
         ]
         nan_counts = df[feature_cols].isna().sum().sum()
         assert nan_counts == 0, f"Detectados {nan_counts} NaNs nas colunas de features em {file_path.name}"
 
     def test_chronological_order(self, file_path):
-        """Valida que o índice (datetime) está em ordem crescente."""
+        """Valida se os dados estão em ordem crescente."""
         df = pd.read_parquet(file_path)
-        assert df.index.is_monotonic_increasing, f"O arquivo {file_path.name} não está em ordem cronológica"
+        # Se 'ts' estiver presente, usamos como referência
+        if 'ts' in df.columns:
+            assert (df['ts'].diff().dropna() >= 0).all(), f"O arquivo {file_path.name} não está em ordem cronológica"
+        else:
+            assert df.index.is_monotonic_increasing, f"O arquivo {file_path.name} não está em ordem cronológica"

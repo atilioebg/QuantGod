@@ -47,16 +47,19 @@ rclone mount drive: /workspace/gdrive --vfs-cache-mode full --allow-other &
 Siga esta ordem rigorosa para reproduzir o ciclo de vida do modelo.
 
 ### 1. Pré-processamento (ETL) 🧹
-Transforma os arquivos brutos ZIP (Bybit L2) em arquivos Parquet otimizados e limpos.
+Transforma os arquivos brutos ZIP (Bybit L2) em arquivos Parquet otimizados e limpos. 
+- **Multi-Ano**: O pipeline realiza busca **recursiva** em subpastas (2023, 2024, etc.).
+- **Compatibilidade**: Suporta arquivos `ob500` e `ob200` aplicando um *Hard Cut* automático para 200 níveis.
 - **Configuração**: `src/cloud/pre_processamento/configs/cloud_config.yaml`
 - **Output**: `data/L2/pre_processed/*.parquet`
 - **Comando**:
   ```powershell
   python -m src.cloud.pre_processamento.orchestration.run_pipeline
   ```
-- **Validação**: Verifique a integridade dos dados gerados:
+- **Validação e Qualidade**:
   ```powershell
   pytest tests/test_cloud_etl_output.py
+  pytest tests/test_preprocessed_quality.py
   ```
 
 ### 2. Rotulagem (Labelling) 🏷️
