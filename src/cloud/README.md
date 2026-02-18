@@ -114,12 +114,32 @@ O sistema mantem logs detalhados para debugging e auditoria de performance.
 
 ---
 
-## 🆘 Troubleshooting
+## ⚡ Performance e Hardware Recomendado
 
-**Erro: `path not found` ou `Z:\...` inexistente**
+O processamento L2 é intensivo em CPU devido à reconstrução do Orderbook segundo a segundo (1000ms).
+
+*   **Processamento de ob500 (2023)**: Exige significativamente mais CPU que o ob200.
+*   **Instância Recomendada (RunPod/Cloud)**: 
+    *   Mínimo: **4 vCPUs** / **16GB RAM**.
+    *   Ideal: **8+ vCPUs** para paralelismo máximo no ETL.
+*   **GPU**: Necessária apenas para as etapas 3 (Optimization) e 4 (Training). Uma RTX 3090/4090 ou instâncias de A100 são recomendadas para velocidade.
+
+---
+
+## 🆘 Troubleshooting & Checklist Final
+
+### 1. A Pegadinha do Caminho (Z:/ vs /workspace/) 📂
+O arquivo `cloud_config.yaml` precisa ser ajustado conforme o ambiente:
+- **Local (Windows)**: `rclone_mount: "Z:/PROJETOS/..."`
+- **Cloud (Linux/RunPod)**: `rclone_mount: "/workspace/gdrive/..."`
+
+### 2. Consistência ob500 vs ob200
+O pipeline aplica um **Hard Cut** automático para 200 níveis. Isso garante que, independentemente da profundidade do arquivo original (2023 vs 2026), o output terá **exatamente as mesmas colunas**, evitando erros no treinamento.
+
+### 3. Erro: `path not found` ou `Z:\...` inexistente
 - Verifique se o Rclone está rodando (Passo 2).
 - Se estiver no Linux, verifique se o caminho no `cloud_config.yaml` aponta para `/workspace/gdrive/...`.
 
-**Erro: `Out of Memory (OOM)`**
+### 4. Erro: `Out of Memory (OOM)`
 - Reduza o `batch_size` nos arquivos de configuração `.yaml`.
 - No ETL, reduza o número de workers em `run_pipeline.py`.
