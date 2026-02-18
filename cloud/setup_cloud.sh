@@ -18,7 +18,7 @@ fi
 echo "[INFO] Installing Python dependencies..."
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements_cloud.txt
+pip install -r requirements.txt
 
 # 4. Create directory structure
 echo "[INFO] Creating data directories..."

@@ -16,7 +16,7 @@ chmod +x setup_cloud.sh
 **O que ele faz:**
 - Instala `rclone`, `pip` e `venv`.
 - Cria o ambiente virtual `.venv`.
-- Instala as dependências de `requirements_cloud.txt`.
+- Instala as dependências de `requirements.txt`.
 - Cria as pastas `data/processed`, `data/models` e `logs` na raiz do projeto.
 
 ---
