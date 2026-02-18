@@ -52,11 +52,27 @@ chmod +x setup_cloud.sh
 ./setup_cloud.sh
 ```
 
-### Passo 2: Configurar o Rclone
-Você precisa configurar sua conexão com o Google Drive:
-```bash
-rclone config
-```
+### Passo 2: Configurar e Ativar o Rclone
+O processo de ativação depende do seu ambiente:
+
+#### 1. No Windows (Seu PC atual)
+Como o WinFSP já está instalado, você pode usar o `rclone.exe` presente na raiz do projeto para montar o Google Drive como um disco local (`Z:`):
+1. Abra um terminal exclusivo para o rclone.
+2. Execute o comando para montar:
+   ```powershell
+   .\rclone.exe mount drive: Z: --vfs-cache-mode full --config rclone.conf
+   ```
+3. **Mantenha o terminal aberto.** Se fechar, o disco `Z:` será desconectado.
+
+#### 2. Na Cloud (Linux / RunPod)
+No Linux, o mount é feito em um diretório do sistema:
+1. Configure o acesso (caso ainda não tenha feito): `rclone config`.
+2. Crie a pasta de destino: `mkdir -p /workspace/gdrive`.
+3. Ative o mount em segundo plano:
+   ```bash
+   rclone mount drive: /workspace/gdrive --vfs-cache-mode full --allow-other &
+   ```
+   *O `&` no final libera o terminal para outros comandos.*
 
 ### Passo 3: Rodar o Processamento
 Ative o ambiente e execute o pipeline:
