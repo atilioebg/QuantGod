@@ -13,9 +13,9 @@ class DataExtractor:
             logger.warning(f"Mount path {rclone_mount_path} not found. Ensure rclone is mounted.")
 
     def list_zips(self) -> list[Path]:
-        """Lists all ZIP files in the mount directory."""
-        zips = sorted(list(self.mount_path.glob("*.zip")))
-        logger.info(f"Found {len(zips)} ZIP files in {self.mount_path}")
+        """Lists all ZIP files in the mount directory and subdirectories recursively."""
+        zips = sorted(list(self.mount_path.rglob("*.zip")))
+        logger.info(f"Found {len(zips)} ZIP files recursively in {self.mount_path}")
         return zips
 
     def stream_zip_content(self, zip_path: Path) -> Generator[Tuple[str, any], None, None]:

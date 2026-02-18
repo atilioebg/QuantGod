@@ -109,7 +109,9 @@ class L2Transformer:
 
     def apply_feature_engineering(self, df: pd.DataFrame) -> pd.DataFrame:
         """Applies 1min resampling, log-returns and log-volume."""
-        if df.empty: return df
+        if df.empty: 
+            logger.warning("apply_feature_engineering received an empty DataFrame")
+            return df
 
         df['datetime'] = pd.to_datetime(df['ts'], unit='ms')
         df.set_index('datetime', inplace=True)

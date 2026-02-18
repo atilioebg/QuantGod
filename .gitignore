@@ -11,6 +11,7 @@ env/
 
 # Data
 data/
+!data/README.md
 !data/.gitkeep
 !data/*.pth
 
@@ -21,3 +22,12 @@ data/
 
 # Logs
 *.log
+
+# Scripts & Configs
+rclone.exe
+rclone.conf
+optuna_study.db
+*.db
+
+# Temporary
+logs/
