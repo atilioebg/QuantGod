@@ -31,3 +31,4 @@ optuna_study.db
 
 # Temporary
 logs/
+runpos_token.txt
